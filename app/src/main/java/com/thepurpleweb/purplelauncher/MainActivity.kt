@@ -13,26 +13,27 @@ import com.thepurpleweb.purplelauncher.dock.DockAdapter
 import com.thepurpleweb.purplelauncher.dock.DockEditorActivity
 import com.thepurpleweb.purplelauncher.dock.DockRepository
 import com.thepurpleweb.purplelauncher.drawer.AppDrawerActivity
+import com.thepurpleweb.purplelauncher.gestures.GestureAction
+import com.thepurpleweb.purplelauncher.gestures.GestureRepository
+import com.thepurpleweb.purplelauncher.gestures.LauncherGestureDetector
 import com.thepurpleweb.purplelauncher.profile.ProfileEngine
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
-import kotlin.math.abs
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var profileEngine: ProfileEngine
     private lateinit var appRepository: AppRepository
     private lateinit var dockRepository: DockRepository
+    private lateinit var gestureRepository: GestureRepository
+    private lateinit var gestureDetector: LauncherGestureDetector
 
     private lateinit var profileLabel: TextView
     private lateinit var appGrid: GridView
     private lateinit var dockGrid: GridView
     private lateinit var dockAdapter: DockAdapter
-
-    private var downY = 0f
-    private var downX = 0f
 
     private val curatedPackageHints = listOf(
         "com.android.dialer",
@@ -60,9 +61,7 @@ class MainActivity : AppCompatActivity() {
                 File(
                     getExternalFilesDir(null),
                     "crash_log.txt"
-                ).writeText(
-                    sw.toString()
-                )
+                ).writeText(sw.toString())
 
             } catch (_: Exception) {
             }
@@ -92,6 +91,18 @@ class MainActivity : AppCompatActivity() {
             DockRepository(
                 applicationContext
             )
+
+        gestureRepository =
+            GestureRepository(
+                applicationContext
+            )
+
+        gestureDetector =
+            LauncherGestureDetector(
+                gestureRepository
+            ) { action ->
+                handleGestureAction(action)
+            }
 
         profileLabel =
             findViewById(
@@ -134,6 +145,44 @@ class MainActivity : AppCompatActivity() {
 
         loadHomeApps()
         loadDock()
+    }
+
+    override fun dispatchTouchEvent(
+        event: MotionEvent
+    ): Boolean {
+
+        if (
+            gestureDetector.onTouchEvent(event)
+        ) {
+            return true
+        }
+
+        return super.dispatchTouchEvent(event)
+    }
+
+    private fun handleGestureAction(
+        action: GestureAction
+    ) {
+
+        when (action) {
+
+            GestureAction.OPEN_APP_DRAWER ->
+                openDrawer()
+
+            GestureAction.OPEN_SETTINGS ->
+                openLauncherSettings()
+
+            GestureAction.SWITCH_PROFILE ->
+                profileEngine.cycleNext()
+
+            GestureAction.OPEN_SEARCH ->
+                openSearch()
+
+            GestureAction.OPEN_NOTIFICATIONS ->
+                openNotifications()
+
+            GestureAction.NONE -> Unit
+        }
     }
 
     private fun loadHomeApps() {
@@ -200,16 +249,6 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun openDockEditor() {
-
-        startActivity(
-            Intent(
-                this,
-                DockEditorActivity::class.java
-            )
-        )
-    }
-
     private fun openDrawer() {
 
         startActivity(
@@ -220,41 +259,25 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    override fun dispatchTouchEvent(
-        event: MotionEvent
-    ): Boolean {
+    private fun openDockEditor() {
 
-        when (event.actionMasked) {
-
-            MotionEvent.ACTION_DOWN -> {
-                downX = event.x
-                downY = event.y
-            }
-
-            MotionEvent.ACTION_UP -> {
-
-                val deltaX =
-                    event.x - downX
-
-                val deltaY =
-                    event.y - downY
-
-                val verticalSwipe =
-                    abs(deltaY) > 120 &&
-                    abs(deltaY) > abs(deltaX)
-
-                if (
-                    verticalSwipe &&
-                    deltaY < 0
-                ) {
-                    openDrawer()
-                    return true
-                }
-            }
-        }
-
-        return super.dispatchTouchEvent(
-            event
+        startActivity(
+            Intent(
+                this,
+                DockEditorActivity::class.java
+            )
         )
+    }
+
+    private fun openLauncherSettings() {
+        // Settings screen will be implemented in P0.
+    }
+
+    private fun openSearch() {
+        // Search screen will be implemented in P0.
+    }
+
+    private fun openNotifications() {
+        // Notification presentation will be implemented later.
     }
 }
