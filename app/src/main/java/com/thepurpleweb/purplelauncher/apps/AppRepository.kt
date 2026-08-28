@@ -4,26 +4,76 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 
-class AppRepository(private val context: Context) {
+class AppRepository(context: Context) {
 
-    fun getAllLaunchableApps(): List<AppInfo> {
-        val pm = context.packageManager
+    private val appContext = context.applicationContext
+    private val packageManager: PackageManager = appContext.packageManager
+    private val categorizer = AppCategorizer()
+
+    @Volatile
+    private var cachedApps: List<AppInfo>? = null
+
+    fun getAllLaunchableApps(forceRefresh: Boolean = false): List<AppInfo> {
+        if (!forceRefresh) {
+            cachedApps?.let { return it }
+        }
+
         val intent = Intent(Intent.ACTION_MAIN, null).apply {
             addCategory(Intent.CATEGORY_LAUNCHER)
         }
-        val resolveInfos = pm.queryIntentActivities(intent, 0)
 
-        return resolveInfos.map { resolveInfo ->
-            AppInfo(
-                label = resolveInfo.loadLabel(pm).toString(),
-                packageName = resolveInfo.activityInfo.packageName,
-                icon = resolveInfo.loadIcon(pm)
-            )
-        }.sortedBy { it.label.lowercase() }
+        val apps = packageManager
+            .queryIntentActivities(intent, PackageManager.MATCH_ALL)
+            .asSequence()
+            .map { resolveInfo ->
+                AppInfo(
+                    label = resolveInfo.loadLabel(packageManager).toString(),
+                    packageName = resolveInfo.activityInfo.packageName,
+                    icon = resolveInfo.loadIcon(packageManager)
+                )
+            }
+            .distinctBy { it.packageName }
+            .sortedBy { it.label.lowercase() }
+            .toList()
+
+        cachedApps = apps
+        return apps
+    }
+
+    fun getAppsByCategory(
+        category: AppCategory,
+        forceRefresh: Boolean = false
+    ): List<AppInfo> {
+        val apps = getAllLaunchableApps(forceRefresh)
+
+        if (category == AppCategory.ALL) {
+            return apps
+        }
+
+        return apps.filter {
+            categorizer.categorize(it) == category
+        }
+    }
+
+    fun invalidateCache() {
+        cachedApps = null
+    }
+
+    fun refresh(): List<AppInfo> {
+        invalidateCache()
+        return getAllLaunchableApps(true)
     }
 
     fun launchApp(packageName: String) {
-        val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
-        launchIntent?.let { context.startActivity(it) }
+        try {
+            val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+
+            launchIntent?.apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                appContext.startActivity(this)
+            }
+        } catch (_: Exception) {
+            // App may have disappeared between discovery and launch.
+        }
     }
 }
