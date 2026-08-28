@@ -17,6 +17,7 @@ import com.thepurpleweb.purplelauncher.gestures.GestureAction
 import com.thepurpleweb.purplelauncher.gestures.GestureRepository
 import com.thepurpleweb.purplelauncher.gestures.LauncherGestureDetector
 import com.thepurpleweb.purplelauncher.profile.ProfileEngine
+import com.thepurpleweb.purplelauncher.search.SearchActivity
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.PrintWriter
@@ -48,11 +49,17 @@ class MainActivity : AppCompatActivity() {
         "com.android.vending"
     )
 
-    override fun onCreate(savedInstanceState: Bundle?) {
+    override fun onCreate(
+        savedInstanceState: Bundle?
+    ) {
 
-        Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
+        Thread.setDefaultUncaughtExceptionHandler {
+                _,
+                throwable ->
+
             try {
-                val sw = StringWriter()
+                val sw =
+                    StringWriter()
 
                 throwable.printStackTrace(
                     PrintWriter(sw)
@@ -61,7 +68,9 @@ class MainActivity : AppCompatActivity() {
                 File(
                     getExternalFilesDir(null),
                     "crash_log.txt"
-                ).writeText(sw.toString())
+                ).writeText(
+                    sw.toString()
+                )
 
             } catch (_: Exception) {
             }
@@ -71,7 +80,9 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        super.onCreate(savedInstanceState)
+        super.onCreate(
+            savedInstanceState
+        )
 
         setContentView(
             R.layout.activity_main
@@ -101,7 +112,9 @@ class MainActivity : AppCompatActivity() {
             LauncherGestureDetector(
                 gestureRepository
             ) { action ->
-                handleGestureAction(action)
+                handleGestureAction(
+                    action
+                )
             }
 
         profileLabel =
@@ -131,6 +144,7 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             profileEngine.current.collect { profile ->
+
                 profileLabel.text =
                     "${profile.displayName}  ·  swipe up for apps"
             }
@@ -139,6 +153,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+
+        appRepository.invalidateCache()
 
         dockRepository.removeMissingApps()
         dockRepository.ensureDefaultDock()
@@ -152,12 +168,16 @@ class MainActivity : AppCompatActivity() {
     ): Boolean {
 
         if (
-            gestureDetector.onTouchEvent(event)
+            gestureDetector.onTouchEvent(
+                event
+            )
         ) {
             return true
         }
 
-        return super.dispatchTouchEvent(event)
+        return super.dispatchTouchEvent(
+            event
+        )
     }
 
     private fun handleGestureAction(
@@ -169,19 +189,20 @@ class MainActivity : AppCompatActivity() {
             GestureAction.OPEN_APP_DRAWER ->
                 openDrawer()
 
+            GestureAction.OPEN_SEARCH ->
+                openSearch()
+
             GestureAction.OPEN_SETTINGS ->
                 openLauncherSettings()
 
             GestureAction.SWITCH_PROFILE ->
                 profileEngine.cycleNext()
 
-            GestureAction.OPEN_SEARCH ->
-                openSearch()
-
             GestureAction.OPEN_NOTIFICATIONS ->
                 openNotifications()
 
-            GestureAction.NONE -> Unit
+            GestureAction.NONE ->
+                Unit
         }
     }
 
@@ -194,7 +215,8 @@ class MainActivity : AppCompatActivity() {
         val curatedApps =
             allApps
                 .filter {
-                    it.packageName in curatedPackageHints
+                    it.packageName in
+                        curatedPackageHints
                 }
                 .ifEmpty {
                     allApps.take(8)
@@ -205,6 +227,7 @@ class MainActivity : AppCompatActivity() {
                 this,
                 curatedApps
             ) { app ->
+
                 appRepository.launchApp(
                     app.packageName
                 )
@@ -219,13 +242,16 @@ class MainActivity : AppCompatActivity() {
                 emptyList(),
 
                 onAppClick = { app ->
+
                     appRepository.launchApp(
                         app.packageName
                     )
                 },
 
                 onAppLongClick = {
+
                     openDockEditor()
+
                     true
                 }
             )
@@ -259,6 +285,16 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    private fun openSearch() {
+
+        startActivity(
+            Intent(
+                this,
+                SearchActivity::class.java
+            )
+        )
+    }
+
     private fun openDockEditor() {
 
         startActivity(
@@ -270,11 +306,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openLauncherSettings() {
-        // Settings screen will be implemented in P0.
-    }
-
-    private fun openSearch() {
-        // Search screen will be implemented in P0.
+        // Launcher settings will be implemented in P0.
     }
 
     private fun openNotifications() {
