@@ -9,6 +9,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.thepurpleweb.purplelauncher.apps.AppRepository
 import com.thepurpleweb.purplelauncher.apps.HomeAppAdapter
+import com.thepurpleweb.purplelauncher.dock.DockAdapter
+import com.thepurpleweb.purplelauncher.dock.DockEditorActivity
+import com.thepurpleweb.purplelauncher.dock.DockRepository
 import com.thepurpleweb.purplelauncher.drawer.AppDrawerActivity
 import com.thepurpleweb.purplelauncher.gestures.GestureAction
 import com.thepurpleweb.purplelauncher.gestures.GestureRepository
@@ -25,10 +28,13 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var profileEngine: ProfileEngine
     private lateinit var appRepository: AppRepository
+    private lateinit var dockRepository: DockRepository
     private lateinit var gestureRepository: GestureRepository
 
     private lateinit var profileLabel: TextView
     private lateinit var appGrid: GridView
+    private lateinit var dockGrid: GridView
+    private lateinit var dockAdapter: DockAdapter
 
     private val curatedPackageHints = listOf(
         "com.android.dialer",
@@ -64,39 +70,41 @@ class MainActivity : AppCompatActivity() {
         }
 
         super.onCreate(savedInstanceState)
-
-        setContentView(
-            R.layout.activity_main
-        )
+        setContentView(R.layout.activity_main)
 
         profileEngine =
-            ProfileEngine(
-                applicationContext
-            )
+            ProfileEngine(applicationContext)
 
         appRepository =
-            AppRepository(
-                applicationContext
-            )
+            AppRepository(applicationContext)
+
+        dockRepository =
+            DockRepository(applicationContext)
 
         gestureRepository =
-            GestureRepository(
-                applicationContext
-            )
+            GestureRepository(applicationContext)
 
         profileLabel =
-            findViewById(
-                R.id.profile_label
-            )
+            findViewById(R.id.profile_label)
 
         appGrid =
-            findViewById(
-                R.id.app_grid
-            )
+            findViewById(R.id.app_grid)
+
+        dockGrid =
+            findViewById(R.id.dock_grid)
 
         setupHome()
+        setupDock()
         setupGestures()
         observeProfile()
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        if (::dockRepository.isInitialized) {
+            refreshDock()
+        }
     }
 
     private fun setupHome() {
@@ -106,8 +114,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val allApps =
-            appRepository
-                .getAllLaunchableApps()
+            appRepository.getAllLaunchableApps()
 
         val curatedApps =
             allApps
@@ -123,25 +130,66 @@ class MainActivity : AppCompatActivity() {
                 this,
                 curatedApps
             ) { app ->
-
                 appRepository.launchApp(
                     app.packageName
                 )
             }
     }
 
+    private fun setupDock() {
+
+        dockRepository.ensureDefaultDock()
+        dockRepository.removeMissingApps()
+
+        dockAdapter =
+            DockAdapter(
+                this,
+                dockRepository.getDockApps(),
+                onAppClick = { app ->
+                    appRepository.launchApp(
+                        app.packageName
+                    )
+                },
+                onAppLongClick = {
+                    startActivity(
+                        Intent(
+                            this,
+                            DockEditorActivity::class.java
+                        )
+                    )
+
+                    true
+                }
+            )
+
+        dockGrid.adapter =
+            dockAdapter
+    }
+
+    private fun refreshDock() {
+
+        if (!::dockAdapter.isInitialized) {
+            return
+        }
+
+        dockRepository.removeMissingApps()
+
+        dockAdapter.updateApps(
+            dockRepository.getDockApps()
+        )
+    }
+
     private fun setupGestures() {
 
         val rootView =
             findViewById<View>(
-                android.R.id.content
+                R.id.home_root
             )
 
         val detector =
             LauncherGestureDetector(
                 gestureRepository
             ) { action ->
-
                 handleGestureAction(
                     action
                 )
@@ -199,16 +247,21 @@ class MainActivity : AppCompatActivity() {
             }
 
             GestureAction.OPEN_NOTIFICATIONS -> {
-                try {
-                    startActivity(
-                        Intent(
-                            "android.settings.NOTIFICATION_LISTENER_SETTINGS"
-                        )
-                    )
-                } catch (_: Exception) {
-                    // Optional Android capability.
-                }
+                openNotifications()
             }
+        }
+    }
+
+    private fun openNotifications() {
+
+        try {
+            startActivity(
+                Intent(
+                    "android.settings.NOTIFICATION_LISTENER_SETTINGS"
+                )
+            )
+        } catch (_: Exception) {
+            // Optional Android capability.
         }
     }
 
