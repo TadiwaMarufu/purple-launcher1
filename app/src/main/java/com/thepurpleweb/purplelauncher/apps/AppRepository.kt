@@ -28,14 +28,11 @@ class AppRepository(
             )
         }
 
-        val resolveInfos =
+        val apps =
             pm.queryIntentActivities(
                 intent,
                 0
             )
-
-        val apps =
-            resolveInfos
                 .map { resolveInfo ->
                     AppInfo(
                         label =
@@ -78,33 +75,31 @@ class AppRepository(
                 apps
 
             AppCategory.COMMUNICATION ->
-                apps.filter {
-                    isCommunication(it)
-                }
+                apps.filter(::isCommunication)
 
             AppCategory.SOCIAL ->
-                apps.filter {
-                    isSocial(it)
-                }
+                apps.filter(::isSocial)
 
             AppCategory.MEDIA ->
-                apps.filter {
-                    isMedia(it)
-                }
+                apps.filter(::isMedia)
 
             AppCategory.WORK ->
-                apps.filter {
-                    isWork(it)
-                }
+                apps.filter(::isWork)
 
             AppCategory.GAMES ->
-                apps.filter {
-                    isGame(it)
-                }
+                apps.filter(::isGame)
 
             AppCategory.TOOLS ->
-                apps.filter {
-                    isTool(it)
+                apps.filter(::isTool)
+
+            AppCategory.OTHER ->
+                apps.filter { app ->
+                    !isCommunication(app) &&
+                    !isSocial(app) &&
+                    !isMedia(app) &&
+                    !isWork(app) &&
+                    !isGame(app) &&
+                    !isTool(app)
                 }
         }
     }
@@ -112,13 +107,8 @@ class AppRepository(
     private fun isCommunication(
         app: AppInfo
     ): Boolean {
-
-        val text =
-            "${app.label} ${app.packageName}"
-                .lowercase()
-
         return containsAny(
-            text,
+            app,
             "message",
             "messaging",
             "sms",
@@ -136,13 +126,8 @@ class AppRepository(
     private fun isSocial(
         app: AppInfo
     ): Boolean {
-
-        val text =
-            "${app.label} ${app.packageName}"
-                .lowercase()
-
         return containsAny(
-            text,
+            app,
             "facebook",
             "instagram",
             "twitter",
@@ -156,13 +141,8 @@ class AppRepository(
     private fun isMedia(
         app: AppInfo
     ): Boolean {
-
-        val text =
-            "${app.label} ${app.packageName}"
-                .lowercase()
-
         return containsAny(
-            text,
+            app,
             "spotify",
             "youtube",
             "music",
@@ -178,13 +158,8 @@ class AppRepository(
     private fun isWork(
         app: AppInfo
     ): Boolean {
-
-        val text =
-            "${app.label} ${app.packageName}"
-                .lowercase()
-
         return containsAny(
-            text,
+            app,
             "office",
             "docs",
             "drive",
@@ -200,13 +175,8 @@ class AppRepository(
     private fun isGame(
         app: AppInfo
     ): Boolean {
-
-        val text =
-            "${app.label} ${app.packageName}"
-                .lowercase()
-
         return containsAny(
-            text,
+            app,
             "game",
             "games"
         )
@@ -215,13 +185,8 @@ class AppRepository(
     private fun isTool(
         app: AppInfo
     ): Boolean {
-
-        val text =
-            "${app.label} ${app.packageName}"
-                .lowercase()
-
         return containsAny(
-            text,
+            app,
             "settings",
             "calculator",
             "clock",
@@ -235,9 +200,14 @@ class AppRepository(
     }
 
     private fun containsAny(
-        text: String,
+        app: AppInfo,
         vararg values: String
     ): Boolean {
+
+        val text =
+            "${app.label} ${app.packageName}"
+                .lowercase()
+
         return values.any {
             text.contains(it)
         }
