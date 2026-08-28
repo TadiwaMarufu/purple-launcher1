@@ -2,7 +2,6 @@ package com.thepurpleweb.purplelauncher.apps
 
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 
 class AppRepository(
     private val context: Context
@@ -15,9 +14,7 @@ class AppRepository(
     ): List<AppInfo> {
 
         if (!forceRefresh) {
-            cachedApps?.let {
-                return it
-            }
+            cachedApps?.let { return it }
         }
 
         val pm = context.packageManager
@@ -69,123 +66,172 @@ class AppRepository(
     }
 
     fun getAppsByCategory(
-        category: String
+        category: AppCategory
     ): List<AppInfo> {
 
         val apps =
             getAllLaunchableApps()
 
-        if (category.equals(
-                "All",
-                ignoreCase = true
-            )
-        ) {
-            return apps
-        }
+        return when (category) {
 
-        return apps.filter { app ->
-            matchesCategory(
-                app,
-                category
-            )
+            AppCategory.ALL ->
+                apps
+
+            AppCategory.COMMUNICATION ->
+                apps.filter {
+                    isCommunication(it)
+                }
+
+            AppCategory.SOCIAL ->
+                apps.filter {
+                    isSocial(it)
+                }
+
+            AppCategory.MEDIA ->
+                apps.filter {
+                    isMedia(it)
+                }
+
+            AppCategory.WORK ->
+                apps.filter {
+                    isWork(it)
+                }
+
+            AppCategory.GAMES ->
+                apps.filter {
+                    isGame(it)
+                }
+
+            AppCategory.TOOLS ->
+                apps.filter {
+                    isTool(it)
+                }
         }
     }
 
-    private fun matchesCategory(
-        app: AppInfo,
-        category: String
+    private fun isCommunication(
+        app: AppInfo
     ): Boolean {
 
         val text =
             "${app.label} ${app.packageName}"
                 .lowercase()
 
-        return when (
-            category.lowercase()
-        ) {
+        return containsAny(
+            text,
+            "message",
+            "messaging",
+            "sms",
+            "dialer",
+            "phone",
+            "contact",
+            "whatsapp",
+            "telegram",
+            "signal",
+            "mail",
+            "email"
+        )
+    }
 
-            "communication" ->
-                containsAny(
-                    text,
-                    "message",
-                    "messaging",
-                    "sms",
-                    "dialer",
-                    "phone",
-                    "contact",
-                    "whatsapp",
-                    "telegram",
-                    "signal",
-                    "mail",
-                    "email"
-                )
+    private fun isSocial(
+        app: AppInfo
+    ): Boolean {
 
-            "social" ->
-                containsAny(
-                    text,
-                    "facebook",
-                    "instagram",
-                    "twitter",
-                    "tiktok",
-                    "reddit",
-                    "snapchat",
-                    "social"
-                )
+        val text =
+            "${app.label} ${app.packageName}"
+                .lowercase()
 
-            "media" ->
-                containsAny(
-                    text,
-                    "spotify",
-                    "youtube",
-                    "music",
-                    "video",
-                    "camera",
-                    "gallery",
-                    "photos",
-                    "netflix",
-                    "media"
-                )
+        return containsAny(
+            text,
+            "facebook",
+            "instagram",
+            "twitter",
+            "tiktok",
+            "reddit",
+            "snapchat",
+            "social"
+        )
+    }
 
-            "work" ->
-                containsAny(
-                    text,
-                    "office",
-                    "docs",
-                    "drive",
-                    "calendar",
-                    "slack",
-                    "teams",
-                    "notion",
-                    "work",
-                    "mail",
-                    "gmail"
-                )
+    private fun isMedia(
+        app: AppInfo
+    ): Boolean {
 
-            "games" ->
-                containsAny(
-                    text,
-                    "game",
-                    "games",
-                    "play"
-                )
+        val text =
+            "${app.label} ${app.packageName}"
+                .lowercase()
 
-            "tools" ->
-                containsAny(
-                    text,
-                    "settings",
-                    "calculator",
-                    "clock",
-                    "file",
-                    "manager",
-                    "browser",
-                    "chrome",
-                    "firefox",
-                    "tool"
-                )
+        return containsAny(
+            text,
+            "spotify",
+            "youtube",
+            "music",
+            "video",
+            "camera",
+            "gallery",
+            "photos",
+            "netflix",
+            "media"
+        )
+    }
 
-            else ->
-                apps
-        }
+    private fun isWork(
+        app: AppInfo
+    ): Boolean {
+
+        val text =
+            "${app.label} ${app.packageName}"
+                .lowercase()
+
+        return containsAny(
+            text,
+            "office",
+            "docs",
+            "drive",
+            "calendar",
+            "slack",
+            "teams",
+            "notion",
+            "work",
+            "gmail"
+        )
+    }
+
+    private fun isGame(
+        app: AppInfo
+    ): Boolean {
+
+        val text =
+            "${app.label} ${app.packageName}"
+                .lowercase()
+
+        return containsAny(
+            text,
+            "game",
+            "games"
+        )
+    }
+
+    private fun isTool(
+        app: AppInfo
+    ): Boolean {
+
+        val text =
+            "${app.label} ${app.packageName}"
+                .lowercase()
+
+        return containsAny(
+            text,
+            "settings",
+            "calculator",
+            "clock",
+            "file",
+            "manager",
+            "browser",
+            "chrome",
+            "firefox",
+            "tool"
+        )
     }
 
     private fun containsAny(
