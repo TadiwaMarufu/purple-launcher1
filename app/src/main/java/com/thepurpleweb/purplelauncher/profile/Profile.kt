@@ -8,7 +8,9 @@ sealed class Profile(val id: String, val displayName: String) {
     object Expressive : Profile("expressive", "Expressive")
 
     companion object {
-        val all = listOf(Fluid, Premium, Calm, Focus, Expressive)
+        val all: List<Profile> by lazy {
+            listOf(Fluid, Premium, Calm, Focus, Expressive)
+        }
 
         fun fromId(id: String): Profile =
             all.find { it.id == id } ?: Calm // safe default
