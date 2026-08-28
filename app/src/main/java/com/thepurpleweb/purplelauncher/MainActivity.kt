@@ -1,5 +1,6 @@
 package com.thepurpleweb.purplelauncher
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.GridView
@@ -8,6 +9,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.thepurpleweb.purplelauncher.apps.AppRepository
 import com.thepurpleweb.purplelauncher.apps.HomeAppAdapter
+import com.thepurpleweb.purplelauncher.drawer.AppDrawerActivity
 import com.thepurpleweb.purplelauncher.gestures.GestureAction
 import com.thepurpleweb.purplelauncher.gestures.GestureRepository
 import com.thepurpleweb.purplelauncher.gestures.LauncherGestureDetector
@@ -47,10 +49,12 @@ class MainActivity : AppCompatActivity() {
             try {
                 val sw = StringWriter()
                 throwable.printStackTrace(PrintWriter(sw))
+
                 File(
                     getExternalFilesDir(null),
                     "crash_log.txt"
                 ).writeText(sw.toString())
+
             } catch (_: Exception) {
             }
 
@@ -60,22 +64,35 @@ class MainActivity : AppCompatActivity() {
         }
 
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+
+        setContentView(
+            R.layout.activity_main
+        )
 
         profileEngine =
-            ProfileEngine(applicationContext)
+            ProfileEngine(
+                applicationContext
+            )
 
         appRepository =
-            AppRepository(applicationContext)
+            AppRepository(
+                applicationContext
+            )
 
         gestureRepository =
-            GestureRepository(applicationContext)
+            GestureRepository(
+                applicationContext
+            )
 
         profileLabel =
-            findViewById(R.id.profile_label)
+            findViewById(
+                R.id.profile_label
+            )
 
         appGrid =
-            findViewById(R.id.app_grid)
+            findViewById(
+                R.id.app_grid
+            )
 
         setupHome()
         setupGestures()
@@ -89,7 +106,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         val allApps =
-            appRepository.getAllLaunchableApps()
+            appRepository
+                .getAllLaunchableApps()
 
         val curatedApps =
             allApps
@@ -105,6 +123,7 @@ class MainActivity : AppCompatActivity() {
                 this,
                 curatedApps
             ) { app ->
+
                 appRepository.launchApp(
                     app.packageName
                 )
@@ -120,16 +139,19 @@ class MainActivity : AppCompatActivity() {
 
         val detector =
             LauncherGestureDetector(
-                context = this,
-                repository = gestureRepository
+                gestureRepository
             ) { action ->
 
-                handleGestureAction(action)
+                handleGestureAction(
+                    action
+                )
             }
 
         rootView.setOnTouchListener { _, event ->
 
-            detector.onTouchEvent(event)
+            detector.onTouchEvent(
+                event
+            )
 
             true
         }
@@ -142,22 +164,21 @@ class MainActivity : AppCompatActivity() {
         when (action) {
 
             GestureAction.NONE -> {
-                // Intentionally do nothing.
+                // No action.
             }
 
             GestureAction.OPEN_APP_DRAWER -> {
                 startActivity(
-                    android.content.Intent(
+                    Intent(
                         this,
-                        com.thepurpleweb.purplelauncher
-                            .drawer.AppDrawerActivity::class.java
+                        AppDrawerActivity::class.java
                     )
                 )
             }
 
             GestureAction.OPEN_SEARCH -> {
                 startActivity(
-                    android.content.Intent(
+                    Intent(
                         this,
                         SearchActivity::class.java
                     )
@@ -166,7 +187,7 @@ class MainActivity : AppCompatActivity() {
 
             GestureAction.OPEN_SETTINGS -> {
                 startActivity(
-                    android.content.Intent(
+                    Intent(
                         this,
                         SettingsActivity::class.java
                     )
@@ -178,21 +199,16 @@ class MainActivity : AppCompatActivity() {
             }
 
             GestureAction.OPEN_NOTIFICATIONS -> {
-                openNotifications()
+                try {
+                    startActivity(
+                        Intent(
+                            "android.settings.NOTIFICATION_LISTENER_SETTINGS"
+                        )
+                    )
+                } catch (_: Exception) {
+                    // Optional Android capability.
+                }
             }
-        }
-    }
-
-    private fun openNotifications() {
-
-        try {
-            startActivity(
-                android.content.Intent(
-                    "android.settings.NOTIFICATION_LISTENER_SETTINGS"
-                )
-            )
-        } catch (_: Exception) {
-            // Optional Android functionality.
         }
     }
 
