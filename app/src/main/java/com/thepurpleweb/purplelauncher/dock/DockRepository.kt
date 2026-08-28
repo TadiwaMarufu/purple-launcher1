@@ -25,15 +25,14 @@ class DockRepository(context: Context) {
     private val appRepository =
         AppRepository(context.applicationContext)
 
-    fun getSlotCount(): Int {
-        return preferences.getInt(
+    fun getSlotCount(): Int =
+        preferences.getInt(
             KEY_SLOT_COUNT,
             DEFAULT_SLOT_COUNT
         ).coerceIn(
             MIN_SLOT_COUNT,
             MAX_SLOT_COUNT
         )
-    }
 
     fun setSlotCount(count: Int) {
         preferences.edit()
@@ -57,6 +56,7 @@ class DockRepository(context: Context) {
 
         return try {
             val json = JSONArray(raw)
+
             buildList {
                 for (index in 0 until json.length()) {
                     val packageName = json.optString(index)
@@ -89,6 +89,53 @@ class DockRepository(context: Context) {
                 json.toString()
             )
             .apply()
+    }
+
+    fun ensureDefaultDock() {
+        if (getPackageNames().isNotEmpty()) {
+            return
+        }
+
+        val apps =
+            appRepository.getAllLaunchableApps()
+
+        if (apps.isEmpty()) {
+            return
+        }
+
+        val preferredHints = listOf(
+            "com.google.android.dialer",
+            "com.android.dialer",
+            "com.google.android.apps.messaging",
+            "com.android.mms",
+            "com.google.android.chrome",
+            "org.mozilla.firefox",
+            "com.google.android.apps.photos",
+            "com.google.android.youtube",
+            "com.android.settings",
+            "com.android.vending"
+        )
+
+        val preferred =
+            preferredHints.mapNotNull { packageName ->
+                apps.firstOrNull {
+                    it.packageName == packageName
+                }?.packageName
+            }
+
+        val remaining =
+            apps
+                .map { it.packageName }
+                .filterNot {
+                    it in preferred
+                }
+
+        val defaults =
+            (preferred + remaining)
+                .distinct()
+                .take(getSlotCount())
+
+        savePackageNames(defaults)
     }
 
     fun addApp(packageName: String): Boolean {
@@ -130,8 +177,8 @@ class DockRepository(context: Context) {
         toPosition: Int
     ): Boolean {
 
-        val current = getPackageNames()
-            .toMutableList()
+        val current =
+            getPackageNames().toMutableList()
 
         if (
             fromPosition !in current.indices ||
@@ -140,7 +187,8 @@ class DockRepository(context: Context) {
             return false
         }
 
-        val item = current.removeAt(fromPosition)
+        val item =
+            current.removeAt(fromPosition)
 
         current.add(
             toPosition,
@@ -152,26 +200,26 @@ class DockRepository(context: Context) {
         return true
     }
 
-    fun getDockApps(): List<com.thepurpleweb.purplelauncher.apps.AppInfo> {
-        val installedApps =
-            appRepository.getAllLaunchableApps()
-
-        val byPackage =
-            installedApps.associateBy {
+    fun getDockApps() =
+        appRepository
+            .getAllLaunchableApps()
+            .associateBy {
                 it.packageName
             }
-
-        return getPackageNames()
-            .mapNotNull {
-                byPackage[it]
+            .let { byPackage ->
+                getPackageNames().mapNotNull {
+                    byPackage[it]
+                }
             }
-    }
 
     fun removeMissingApps() {
+
         val installedPackages =
             appRepository
                 .getAllLaunchableApps()
-                .map { it.packageName }
+                .map {
+                    it.packageName
+                }
                 .toSet()
 
         savePackageNames(

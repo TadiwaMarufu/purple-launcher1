@@ -29,7 +29,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var profileLabel: TextView
     private lateinit var appGrid: GridView
     private lateinit var dockGrid: GridView
-
     private lateinit var dockAdapter: DockAdapter
 
     private var downY = 0f
@@ -53,12 +52,17 @@ class MainActivity : AppCompatActivity() {
         Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
             try {
                 val sw = StringWriter()
-                throwable.printStackTrace(PrintWriter(sw))
+
+                throwable.printStackTrace(
+                    PrintWriter(sw)
+                )
 
                 File(
                     getExternalFilesDir(null),
                     "crash_log.txt"
-                ).writeText(sw.toString())
+                ).writeText(
+                    sw.toString()
+                )
 
             } catch (_: Exception) {
             }
@@ -69,31 +73,49 @@ class MainActivity : AppCompatActivity() {
         }
 
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+
+        setContentView(
+            R.layout.activity_main
+        )
 
         profileEngine =
-            ProfileEngine(applicationContext)
+            ProfileEngine(
+                applicationContext
+            )
 
         appRepository =
-            AppRepository(applicationContext)
+            AppRepository(
+                applicationContext
+            )
 
         dockRepository =
-            DockRepository(applicationContext)
+            DockRepository(
+                applicationContext
+            )
 
         profileLabel =
-            findViewById(R.id.profile_label)
+            findViewById(
+                R.id.profile_label
+            )
 
         appGrid =
-            findViewById(R.id.app_grid)
+            findViewById(
+                R.id.app_grid
+            )
 
         dockGrid =
-            findViewById(R.id.dock_grid)
+            findViewById(
+                R.id.dock_grid
+            )
+
+        dockRepository.ensureDefaultDock()
 
         profileLabel.setOnClickListener {
             profileEngine.cycleNext()
         }
 
         setupDock()
+
         loadHomeApps()
 
         lifecycleScope.launch {
@@ -107,9 +129,8 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
 
-        appRepository.invalidateCache()
-
         dockRepository.removeMissingApps()
+        dockRepository.ensureDefaultDock()
 
         loadHomeApps()
         loadDock()
@@ -118,7 +139,8 @@ class MainActivity : AppCompatActivity() {
     private fun loadHomeApps() {
 
         val allApps =
-            appRepository.getAllLaunchableApps()
+            appRepository
+                .getAllLaunchableApps()
 
         val curatedApps =
             allApps
@@ -161,6 +183,8 @@ class MainActivity : AppCompatActivity() {
 
         dockGrid.adapter =
             dockAdapter
+
+        loadDock()
     }
 
     private fun loadDock() {
@@ -229,6 +253,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        return super.dispatchTouchEvent(event)
+        return super.dispatchTouchEvent(
+            event
+        )
     }
 }
