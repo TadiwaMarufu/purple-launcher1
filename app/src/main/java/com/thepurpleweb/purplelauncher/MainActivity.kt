@@ -10,6 +10,7 @@ import androidx.lifecycle.lifecycleScope
 import com.thepurpleweb.purplelauncher.apps.AppRepository
 import com.thepurpleweb.purplelauncher.apps.HomeAppAdapter
 import com.thepurpleweb.purplelauncher.dock.DockAdapter
+import com.thepurpleweb.purplelauncher.dock.DockEditorActivity
 import com.thepurpleweb.purplelauncher.dock.DockRepository
 import com.thepurpleweb.purplelauncher.drawer.AppDrawerActivity
 import com.thepurpleweb.purplelauncher.profile.ProfileEngine
