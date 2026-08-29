@@ -1,10 +1,17 @@
 package com.thepurpleweb.purplelauncher
 
+import android.appwidget.AppWidgetHost
+import android.appwidget.AppWidgetHostView
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProviderInfo
 import android.content.Intent
 import android.os.Bundle
+import android.view.Gravity
 import android.view.MotionEvent
+import android.widget.FrameLayout
 import android.widget.GridView
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.thepurpleweb.purplelauncher.apps.AppRepository
@@ -19,6 +26,7 @@ import com.thepurpleweb.purplelauncher.gestures.LauncherGestureDetector
 import com.thepurpleweb.purplelauncher.profile.ProfileEngine
 import com.thepurpleweb.purplelauncher.search.SearchActivity
 import com.thepurpleweb.purplelauncher.settings.SettingsActivity
+import com.thepurpleweb.purplelauncher.widgets.WidgetRepository
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.PrintWriter
@@ -31,6 +39,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var dockRepository: DockRepository
     private lateinit var gestureRepository: GestureRepository
     private lateinit var gestureDetector: LauncherGestureDetector
+
+    private lateinit var widgetRepository: WidgetRepository
+    private lateinit var appWidgetManager: AppWidgetManager
+    private lateinit var appWidgetHost: AppWidgetHost
+    private lateinit var widgetContainer: FrameLayout
+    private var currentWidgetView: AppWidgetHostView? = null
+    private var pendingProvider: AppWidgetProviderInfo? = null
 
     private lateinit var profileLabel: TextView
     private lateinit var appGrid: GridView
@@ -73,31 +88,35 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        profileEngine =
-            ProfileEngine(applicationContext)
+        profileEngine = ProfileEngine(applicationContext)
+        appRepository = AppRepository(applicationContext)
+        dockRepository = DockRepository(applicationContext)
+        gestureRepository = GestureRepository(applicationContext)
+        widgetRepository = WidgetRepository(applicationContext)
 
-        appRepository =
-            AppRepository(applicationContext)
+        appWidgetManager = AppWidgetManager.getInstance(this)
+        appWidgetHost = AppWidgetHost(this, WidgetRepository.HOST_ID)
 
-        dockRepository =
-            DockRepository(applicationContext)
-
-        gestureRepository =
-            GestureRepository(applicationContext)
-
-        profileLabel =
-            findViewById(R.id.profile_label)
-
-        appGrid =
-            findViewById(R.id.app_grid)
-
-        dockGrid =
-            findViewById(R.id.dock_grid)
+        profileLabel = findViewById(R.id.profile_label)
+        appGrid = findViewById(R.id.app_grid)
+        dockGrid = findViewById(R.id.dock_grid)
+        widgetContainer = findViewById(R.id.widget_container)
 
         setupHome()
         setupDock()
         setupGestures()
+        setupWidgetArea()
         observeProfile()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        appWidgetHost.startListening()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        appWidgetHost.stopListening()
     }
 
     override fun onResume() {
@@ -108,12 +127,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Overriding dispatchTouchEvent (instead of an OnTouchListener on the
-    // root view) ensures the gesture detector sees every touch, even ones
-    // that start inside app_grid or dock_grid, which would otherwise
-    // consume the touch themselves before it ever reached a listener on
-    // home_root. We still forward to super so normal clicks/scrolling on
-    // those child views keep working unchanged.
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         if (::gestureDetector.isInitialized) {
             gestureDetector.onTouchEvent(ev)
@@ -127,27 +140,15 @@ class MainActivity : AppCompatActivity() {
             profileEngine.cycleNext()
         }
 
-        val allApps =
-            appRepository.getAllLaunchableApps()
+        val allApps = appRepository.getAllLaunchableApps()
 
-        val curatedApps =
-            allApps
-                .filter {
-                    it.packageName in curatedPackageHints
-                }
-                .ifEmpty {
-                    allApps.take(8)
-                }
+        val curatedApps = allApps
+            .filter { it.packageName in curatedPackageHints }
+            .ifEmpty { allApps.take(8) }
 
-        appGrid.adapter =
-            HomeAppAdapter(
-                this,
-                curatedApps
-            ) { app ->
-                appRepository.launchApp(
-                    app.packageName
-                )
-            }
+        appGrid.adapter = HomeAppAdapter(this, curatedApps) { app ->
+            appRepository.launchApp(app.packageName)
+        }
     }
 
     private fun setupDock() {
@@ -155,29 +156,19 @@ class MainActivity : AppCompatActivity() {
         dockRepository.ensureDefaultDock()
         dockRepository.removeMissingApps()
 
-        dockAdapter =
-            DockAdapter(
-                this,
-                dockRepository.getDockApps(),
-                onAppClick = { app ->
-                    appRepository.launchApp(
-                        app.packageName
-                    )
-                },
-                onAppLongClick = {
-                    startActivity(
-                        Intent(
-                            this,
-                            DockEditorActivity::class.java
-                        )
-                    )
+        dockAdapter = DockAdapter(
+            this,
+            dockRepository.getDockApps(),
+            onAppClick = { app ->
+                appRepository.launchApp(app.packageName)
+            },
+            onAppLongClick = {
+                startActivity(Intent(this, DockEditorActivity::class.java))
+                true
+            }
+        )
 
-                    true
-                }
-            )
-
-        dockGrid.adapter =
-            dockAdapter
+        dockGrid.adapter = dockAdapter
     }
 
     private fun refreshDock() {
@@ -187,27 +178,17 @@ class MainActivity : AppCompatActivity() {
         }
 
         dockRepository.removeMissingApps()
-
-        dockAdapter.updateApps(
-            dockRepository.getDockApps()
-        )
+        dockAdapter.updateApps(dockRepository.getDockApps())
     }
 
     private fun setupGestures() {
 
-        gestureDetector =
-            LauncherGestureDetector(
-                gestureRepository
-            ) { action ->
-                handleGestureAction(
-                    action
-                )
-            }
+        gestureDetector = LauncherGestureDetector(gestureRepository) { action ->
+            handleGestureAction(action)
+        }
     }
 
-    private fun handleGestureAction(
-        action: GestureAction
-    ) {
+    private fun handleGestureAction(action: GestureAction) {
 
         when (action) {
 
@@ -216,30 +197,15 @@ class MainActivity : AppCompatActivity() {
             }
 
             GestureAction.OPEN_APP_DRAWER -> {
-                startActivity(
-                    Intent(
-                        this,
-                        AppDrawerActivity::class.java
-                    )
-                )
+                startActivity(Intent(this, AppDrawerActivity::class.java))
             }
 
             GestureAction.OPEN_SEARCH -> {
-                startActivity(
-                    Intent(
-                        this,
-                        SearchActivity::class.java
-                    )
-                )
+                startActivity(Intent(this, SearchActivity::class.java))
             }
 
             GestureAction.OPEN_SETTINGS -> {
-                startActivity(
-                    Intent(
-                        this,
-                        SettingsActivity::class.java
-                    )
-                )
+                startActivity(Intent(this, SettingsActivity::class.java))
             }
 
             GestureAction.SWITCH_PROFILE -> {
@@ -253,27 +219,179 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openNotifications() {
-
         try {
-            startActivity(
-                Intent(
-                    "android.settings.NOTIFICATION_LISTENER_SETTINGS"
-                )
-            )
+            startActivity(Intent("android.settings.NOTIFICATION_LISTENER_SETTINGS"))
         } catch (_: Exception) {
             // Optional Android capability.
         }
     }
 
-    private fun observeProfile() {
+    // ---- Widget hosting ----
 
-        lifecycleScope.launch {
+    private fun setupWidgetArea() {
 
-            profileEngine.current.collect { profile ->
+        widgetContainer.setOnLongClickListener {
+            if (currentWidgetView == null) {
+                showWidgetPicker()
+            } else {
+                confirmRemoveWidget()
+            }
+            true
+        }
 
-                profileLabel.text =
-                    profile.displayName
+        val savedId = widgetRepository.getSavedWidgetId()
+        if (savedId != -1) {
+            val info = appWidgetManager.getAppWidgetInfo(savedId)
+            if (info != null) {
+                attachWidgetView(savedId, info)
+            } else {
+                widgetRepository.clearWidgetId()
             }
         }
+    }
+
+    private fun showWidgetPicker() {
+        val providers = appWidgetManager.installedProviders
+        if (providers.isEmpty()) {
+            return
+        }
+
+        val labels = providers.map { it.loadLabel(packageManager) }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("Choose a widget")
+            .setItems(labels) { _, which ->
+                beginBind(providers[which])
+            }
+            .show()
+    }
+
+    private fun beginBind(provider: AppWidgetProviderInfo) {
+        val appWidgetId = appWidgetHost.allocateAppWidgetId()
+        val canBind = appWidgetManager.bindAppWidgetIdIfAllowed(appWidgetId, provider.provider)
+
+        if (canBind) {
+            proceedAfterBind(appWidgetId, provider)
+        } else {
+            pendingProvider = provider
+            val bindIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_BIND).apply {
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, provider.provider)
+            }
+            startActivityForResult(bindIntent, REQUEST_BIND_APPWIDGET)
+        }
+    }
+
+    private fun proceedAfterBind(appWidgetId: Int, provider: AppWidgetProviderInfo) {
+        if (provider.configure != null) {
+            val configIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE).apply {
+                component = provider.configure
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+            }
+            try {
+                startActivityForResult(configIntent, REQUEST_CREATE_APPWIDGET_CONFIGURE)
+            } catch (_: Exception) {
+                attachWidgetView(appWidgetId, provider)
+            }
+        } else {
+            attachWidgetView(appWidgetId, provider)
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        when (requestCode) {
+
+            REQUEST_BIND_APPWIDGET -> {
+                val appWidgetId = data?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1) ?: -1
+                val provider = pendingProvider
+                pendingProvider = null
+
+                if (resultCode == RESULT_OK && appWidgetId != -1 && provider != null) {
+                    proceedAfterBind(appWidgetId, provider)
+                } else if (appWidgetId != -1) {
+                    appWidgetHost.deleteAppWidgetId(appWidgetId)
+                }
+            }
+
+            REQUEST_CREATE_APPWIDGET_CONFIGURE -> {
+                val appWidgetId = data?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1) ?: -1
+
+                if (resultCode == RESULT_OK && appWidgetId != -1) {
+                    val info = appWidgetManager.getAppWidgetInfo(appWidgetId)
+                    if (info != null) {
+                        attachWidgetView(appWidgetId, info)
+                    }
+                } else if (appWidgetId != -1) {
+                    appWidgetHost.deleteAppWidgetId(appWidgetId)
+                }
+            }
+        }
+    }
+
+    private fun attachWidgetView(appWidgetId: Int, info: AppWidgetProviderInfo) {
+        val hostView = appWidgetHost.createView(this, appWidgetId, info)
+        hostView.setAppWidget(appWidgetId, info)
+
+        widgetContainer.removeAllViews()
+        widgetContainer.addView(
+            hostView,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        currentWidgetView = hostView
+        widgetRepository.saveWidgetId(appWidgetId)
+    }
+
+    private fun confirmRemoveWidget() {
+        AlertDialog.Builder(this)
+            .setTitle("Remove widget?")
+            .setPositiveButton("Remove") { _, _ -> removeCurrentWidget() }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun removeCurrentWidget() {
+        val savedId = widgetRepository.getSavedWidgetId()
+        if (savedId != -1) {
+            appWidgetHost.deleteAppWidgetId(savedId)
+        }
+
+        widgetContainer.removeAllViews()
+
+        val placeholder = TextView(this).apply {
+            text = "Long-press to add a widget"
+            setTextColor(getColor(android.R.color.darker_gray))
+            textSize = 14f
+            gravity = Gravity.CENTER
+        }
+
+        widgetContainer.addView(
+            placeholder,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        currentWidgetView = null
+        widgetRepository.clearWidgetId()
+    }
+
+    private fun observeProfile() {
+        lifecycleScope.launch {
+            profileEngine.current.collect { profile ->
+                profileLabel.text = profile.displayName
+            }
+        }
+    }
+
+    companion object {
+        private const val REQUEST_BIND_APPWIDGET = 2001
+        private const val REQUEST_CREATE_APPWIDGET_CONFIGURE = 2002
     }
 }
