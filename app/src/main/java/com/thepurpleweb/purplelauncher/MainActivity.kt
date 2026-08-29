@@ -93,7 +93,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        profileEngine = ProfileEngine(applicationContext)
+        profileEngine = ProfileEngine.getInstance(applicationContext)
         appRepository = AppRepository(applicationContext)
         dockRepository = DockRepository(applicationContext)
         gestureRepository = GestureRepository(applicationContext)
