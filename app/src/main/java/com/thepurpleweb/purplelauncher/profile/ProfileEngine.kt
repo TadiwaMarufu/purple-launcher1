@@ -6,13 +6,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Single source of truth for the currently active Purple Launcher profile.
+ * Central profile state manager.
  *
- * ProfileEngine is process-wide so MainActivity and ProfilesActivity observe
- * the same StateFlow. SharedPreferences remains the persistent source of
- * truth across process death/restarts.
+ * Multiple launcher components may create ProfileEngine instances.
+ * They all share the same process-wide StateFlow, so a profile change
+ * made by ProfilesActivity is immediately visible to MainActivity,
+ * adapters, notifications, search, and the Quick Settings tile.
+ *
+ * SharedPreferences remains the persistent source of truth across
+ * activity recreation and process restarts.
  */
-class ProfileEngine private constructor(context: Context) {
+class ProfileEngine(context: Context) {
 
     private val prefs: SharedPreferences =
         context.applicationContext.getSharedPreferences(
@@ -20,83 +24,112 @@ class ProfileEngine private constructor(context: Context) {
             Context.MODE_PRIVATE
         )
 
-    private val _current = MutableStateFlow(loadSavedProfile())
-    val current: StateFlow<Profile> = _current
+    /**
+     * Every ProfileEngine instance exposes the SAME StateFlow.
+     */
+    val current: StateFlow<Profile>
+        get() = sharedCurrent
 
     private val preferenceListener =
         SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (key == KEY_PROFILE) {
-                val savedId = prefs.getString(KEY_PROFILE, Profile.Calm.id)
-                    ?: Profile.Calm.id
+                val savedId = prefs.getString(
+                    KEY_PROFILE,
+                    Profile.Calm.id
+                ) ?: Profile.Calm.id
 
                 val profile = Profile.fromId(savedId)
 
-                if (_current.value.id != profile.id) {
-                    _current.value = profile
+                if (sharedCurrent.value.id != profile.id) {
+                    sharedCurrent.value = profile
                 }
             }
         }
 
     init {
-        prefs.registerOnSharedPreferenceChangeListener(preferenceListener)
-    }
-
-    private fun loadSavedProfile(): Profile {
+        /*
+         * Synchronize the shared in-memory state with persistent state
+         * whenever an engine is created.
+         *
+         * This is intentionally done without replacing the StateFlow,
+         * so existing collectors remain subscribed.
+         */
         val savedId = prefs.getString(
             KEY_PROFILE,
             Profile.Calm.id
         ) ?: Profile.Calm.id
 
-        return Profile.fromId(savedId)
+        val savedProfile = Profile.fromId(savedId)
+
+        if (sharedCurrent.value.id != savedProfile.id) {
+            sharedCurrent.value = savedProfile
+        }
+
+        prefs.registerOnSharedPreferenceChangeListener(
+            preferenceListener
+        )
     }
 
     /**
-     * Changes the active profile immediately and persists it.
-     *
-     * Updating the StateFlow first makes the currently running launcher
-     * react immediately. SharedPreferences then keeps the choice after
-     * activity recreation, process death, or device reboot.
+     * Changes the active profile immediately for every component in the
+     * current application process and persists the choice.
      */
     fun setProfile(profile: Profile) {
-        if (_current.value.id != profile.id) {
-            _current.value = profile
+        /*
+         * Update the shared StateFlow FIRST.
+         *
+         * MainActivity is normally collecting this value, so the home
+         * screen can react immediately without waiting for an activity
+         * restart.
+         */
+        if (sharedCurrent.value.id != profile.id) {
+            sharedCurrent.value = profile
         }
 
+        /*
+         * Persist the selection so it survives:
+         * - activity recreation
+         * - launcher restart
+         * - process death
+         * - device reboot
+         */
         prefs.edit()
             .putString(KEY_PROFILE, profile.id)
             .apply()
     }
 
+    /**
+     * Switch to the next profile in the defined profile order.
+     */
     fun cycleNext() {
-        val idx = Profile.all.indexOfFirst {
-            it.id == _current.value.id
+        val currentIndex = Profile.all.indexOfFirst {
+            it.id == sharedCurrent.value.id
         }
 
-        val nextIndex = if (idx >= 0) {
-            (idx + 1) % Profile.all.size
-        } else {
-            0
-        }
+        val nextIndex =
+            if (currentIndex >= 0) {
+                (currentIndex + 1) % Profile.all.size
+            } else {
+                0
+            }
 
         setProfile(Profile.all[nextIndex])
     }
 
     companion object {
 
-        private const val PREFS_NAME = "purple_launcher_prefs"
-        private const val KEY_PROFILE = "current_profile"
+        private const val PREFS_NAME =
+            "purple_launcher_prefs"
 
-        @Volatile
-        private var INSTANCE: ProfileEngine? = null
+        private const val KEY_PROFILE =
+            "current_profile"
 
-        fun getInstance(context: Context): ProfileEngine {
-            return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: ProfileEngine(
-                    context.applicationContext
-                ).also {
-                    INSTANCE = it
-                }
-            }
-        }
+        /*
+         * One StateFlow for the entire application process.
+         *
+         * This is the important part of the Phase 16 fix.
+         */
+        private val sharedCurrent =
+            MutableStateFlow<Profile>(Profile.Calm)
     }
 }
