@@ -27,6 +27,7 @@ import com.thepurpleweb.purplelauncher.home.HomeLayoutFactory
 import com.thepurpleweb.purplelauncher.profile.Profile
 import com.thepurpleweb.purplelauncher.profile.ProfileEngine
 import com.thepurpleweb.purplelauncher.search.SearchActivity
+import com.thepurpleweb.purplelauncher.notifications.NotificationCenterActivity
 import com.thepurpleweb.purplelauncher.settings.SettingsActivity
 import com.thepurpleweb.purplelauncher.widgets.WidgetRepository
 import kotlinx.coroutines.launch
@@ -240,11 +241,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openNotifications() {
-        try {
-            startActivity(Intent("android.settings.NOTIFICATION_LISTENER_SETTINGS"))
-        } catch (_: Exception) {
-            // Optional Android capability.
-        }
+        startActivity(
+            Intent(
+                this,
+                NotificationCenterActivity::class.java
+            )
+        )
     }
 
     // ---- Widget hosting ----
