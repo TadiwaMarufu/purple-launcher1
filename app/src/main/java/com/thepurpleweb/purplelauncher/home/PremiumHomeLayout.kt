@@ -1,6 +1,5 @@
 package com.thepurpleweb.purplelauncher.home
 
-import android.graphics.Color
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.GridView
@@ -46,6 +45,7 @@ class PremiumHomeLayout : HomeLayout {
                 ProfileVisualsProvider.dp(this, 18),
                 ProfileVisualsProvider.dp(this, 16)
             )
+
             ProfileVisualsProvider.roundedBackground(
                 this,
                 visuals.card,
@@ -63,7 +63,12 @@ class PremiumHomeLayout : HomeLayout {
             text = "Refined by design."
             textSize = visuals.bodySizeSp
             setTextColor(visuals.secondaryText)
-            setPadding(0, ProfileVisualsProvider.dp(this, 4), 0, 0)
+            setPadding(
+                0,
+                ProfileVisualsProvider.dp(this, 4),
+                0,
+                0
+            )
         }
 
         header.addView(title)
@@ -80,11 +85,13 @@ class PremiumHomeLayout : HomeLayout {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0,
                 1f
-            ).apply {
-                topMargin = ProfileVisualsProvider.dp(this@apply, 18)
-            }
+            )
             adapter = HomeAppAdapter(context, apps, onAppClick)
         }
+
+        val gridParams = grid.layoutParams as LinearLayout.LayoutParams
+        gridParams.topMargin = ProfileVisualsProvider.dp(grid, 18)
+        grid.layoutParams = gridParams
 
         root.addView(
             header,
@@ -95,6 +102,7 @@ class PremiumHomeLayout : HomeLayout {
         )
 
         root.addView(grid)
+
         container.addView(root)
 
         ProfileVisualsProvider.animate(root, MotionStyle.PREMIUM)
