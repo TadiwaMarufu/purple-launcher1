@@ -10,7 +10,9 @@ import com.thepurpleweb.purplelauncher.R
 import com.thepurpleweb.purplelauncher.apps.AppInfo
 import com.thepurpleweb.purplelauncher.apps.AppRepository
 import com.thepurpleweb.purplelauncher.drawer.AppDrawerActivity
+import com.thepurpleweb.purplelauncher.profile.Profile
 import com.thepurpleweb.purplelauncher.profile.ProfileEngine
+import com.thepurpleweb.purplelauncher.settings.SettingsActivity
 
 class SearchActivity : AppCompatActivity() {
 
@@ -254,13 +256,18 @@ class SearchActivity : AppCompatActivity() {
             }
 
             SearchCommand.SWITCH_PROFILE -> {
-                profileEngine.cycleNext()
+                profileEngine.setProfile(Profile.Focus)
                 finish()
             }
 
             SearchCommand.OPEN_SETTINGS -> {
-                resultMessage.text =
-                    "Launcher settings coming next"
+                startActivity(
+                    Intent(
+                        this,
+                        SettingsActivity::class.java
+                    )
+                )
+                finish()
             }
 
             SearchCommand.NONE -> {

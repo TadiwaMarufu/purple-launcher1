@@ -60,7 +60,7 @@ class GestureRepository(context: Context) {
                 GestureAction.NONE
 
             GestureType.DOUBLE_TAP ->
-                GestureAction.NONE
+                GestureAction.OPEN_SEARCH
 
             GestureType.LONG_PRESS ->
                 GestureAction.OPEN_SETTINGS
