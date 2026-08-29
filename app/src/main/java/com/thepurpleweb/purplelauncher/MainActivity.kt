@@ -2,7 +2,7 @@ package com.thepurpleweb.purplelauncher
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.View
+import android.view.MotionEvent
 import android.widget.GridView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -30,6 +30,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var appRepository: AppRepository
     private lateinit var dockRepository: DockRepository
     private lateinit var gestureRepository: GestureRepository
+    private lateinit var gestureDetector: LauncherGestureDetector
 
     private lateinit var profileLabel: TextView
     private lateinit var appGrid: GridView
@@ -107,6 +108,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // Overriding dispatchTouchEvent (instead of an OnTouchListener on the
+    // root view) ensures the gesture detector sees every touch, even ones
+    // that start inside app_grid or dock_grid, which would otherwise
+    // consume the touch themselves before it ever reached a listener on
+    // home_root. We still forward to super so normal clicks/scrolling on
+    // those child views keep working unchanged.
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (::gestureDetector.isInitialized) {
+            gestureDetector.onTouchEvent(ev)
+        }
+        return super.dispatchTouchEvent(ev)
+    }
+
     private fun setupHome() {
 
         profileLabel.setOnClickListener {
@@ -181,12 +195,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupGestures() {
 
-        val rootView =
-            findViewById<View>(
-                R.id.home_root
-            )
-
-        val detector =
+        gestureDetector =
             LauncherGestureDetector(
                 gestureRepository
             ) { action ->
@@ -194,15 +203,6 @@ class MainActivity : AppCompatActivity() {
                     action
                 )
             }
-
-        rootView.setOnTouchListener { _, event ->
-
-            detector.onTouchEvent(
-                event
-            )
-
-            true
-        }
     }
 
     private fun handleGestureAction(
