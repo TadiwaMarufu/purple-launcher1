@@ -19,7 +19,7 @@ class DockAdapter(
     private val onAppLongClick: (AppInfo) -> Boolean
 ) : BaseAdapter() {
 
-    private val profileEngine = ProfileEngine(context.applicationContext)
+    private val profileEngine = ProfileEngine.getInstance(context.applicationContext)
 
     fun updateApps(newApps: List<AppInfo>) {
         apps = newApps

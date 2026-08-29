@@ -47,9 +47,7 @@ class SearchActivity : AppCompatActivity() {
             )
 
         profileEngine =
-            ProfileEngine(
-                applicationContext
-            )
+            ProfileEngine.getInstance(applicationContext)
 
         searchInput =
             findViewById(

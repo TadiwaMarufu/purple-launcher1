@@ -48,9 +48,7 @@ class NotificationCenterActivity :
         super.onCreate(savedInstanceState)
 
         profileEngine =
-            ProfileEngine(
-                applicationContext
-            )
+            ProfileEngine.getInstance(applicationContext)
 
         buildUi()
         render()

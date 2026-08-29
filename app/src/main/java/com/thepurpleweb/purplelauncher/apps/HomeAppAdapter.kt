@@ -17,7 +17,7 @@ class HomeAppAdapter(
     private val onAppClick: (AppInfo) -> Unit
 ) : BaseAdapter() {
 
-    private val profileEngine = ProfileEngine(context.applicationContext)
+    private val profileEngine = ProfileEngine.getInstance(context.applicationContext)
 
     override fun getCount(): Int = apps.size
 
