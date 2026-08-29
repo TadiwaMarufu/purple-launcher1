@@ -233,6 +233,11 @@ class NowBarView(
         state: NowBarState
     ) {
 
+        // Detach reusable views from any previous hierarchy.
+        (titleView.parent as? ViewGroup)?.removeView(titleView)
+        (subtitleView.parent as? ViewGroup)?.removeView(subtitleView)
+        (timeView.parent as? ViewGroup)?.removeView(timeView)
+
         removeAllViews()
 
         if (!expanded) {
