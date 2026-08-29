@@ -1,102 +1,82 @@
 package com.thepurpleweb.purplelauncher.nowbar
 
-import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
+import android.os.Handler
+import android.os.Looper
+import android.telephony.PhoneStateListener
 import android.telephony.TelephonyManager
-import androidx.core.content.ContextCompat
 
 class NowBarCallManager(
     private val context: Context,
-    private val onChanged: (NowBarItem?) -> Unit
+    private val onCallStateChanged: (NowBarItem?) -> Unit
 ) {
+    private val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+    private var callStartTime = 0L
+    private val handler = Handler(Looper.getMainLooper())
+    private var isTracking = false
 
-    private val telephonyManager =
-        context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+    private val tickerRunnable = object : Runnable {
+        override fun run() {
+            if (!isTracking) return
+            val elapsedSeconds = (System.currentTimeMillis() - callStartTime) / 1000
+            val minutes = elapsedSeconds / 60
+            val seconds = elapsedSeconds % 60
+            val timeString = String.format("%02d:%02d", minutes, seconds)
 
-    private var listening = false
-
-    private val listener =
-        object : android.telephony.PhoneStateListener() {
-
-            override fun onCallStateChanged(
-                state: Int,
-                phoneNumber: String?
-            ) {
-                when (state) {
-                    TelephonyManager.CALL_STATE_RINGING -> {
-                        onChanged(
-                            NowBarItem(
-                                type = NowBarType.CALL,
-                                title = "Incoming call",
-                                subtitle = phoneNumber ?: "Incoming"
-                            )
-                        )
-                    }
-
-                    TelephonyManager.CALL_STATE_OFFHOOK -> {
-                        onChanged(
-                            NowBarItem(
-                                type = NowBarType.CALL,
-                                title = "Call in progress",
-                                subtitle = phoneNumber ?: "Active call"
-                            )
-                        )
-                    }
-
-                    TelephonyManager.CALL_STATE_IDLE -> {
-                        onChanged(null)
-                    }
-                }
-            }
-        }
-
-    private fun hasPermission(): Boolean =
-        ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.READ_PHONE_STATE
-        ) == PackageManager.PERMISSION_GRANTED
-
-    fun start() {
-
-        if (listening) {
-            return
-        }
-
-        if (!hasPermission()) {
-            // Gracefully degrade: no permission, no call detection,
-            // rest of the launcher is unaffected.
-            return
-        }
-
-        try {
-            @Suppress("DEPRECATION")
-            telephonyManager.listen(
-                listener,
-                android.telephony.PhoneStateListener.LISTEN_CALL_STATE
+            onCallStateChanged(
+                NowBarItem(
+                    type = NowBarType.CALL,
+                    title = "Active Call",
+                    subtitle = timeString,
+                    isPersistent = true
+                )
             )
-            listening = true
-        } catch (_: SecurityException) {
-            // Permission revoked between check and call, or OEM
-            // restriction — degrade gracefully rather than crash.
+            handler.postDelayed(this, 1000)
         }
     }
 
-    fun stop() {
-
-        if (!listening) {
-            return
+    private val listener = object : PhoneStateListener() {
+        @Deprecated("Deprecated in Java")
+        override fun onCallStateChanged(state: Int, phoneNumber: String?) {
+            when (state) {
+                TelephonyManager.CALL_STATE_RINGING -> {
+                    isTracking = false
+                    handler.removeCallbacks(tickerRunnable)
+                    val caller = if (!phoneNumber.isNullOrEmpty()) phoneNumber else "Incoming Call"
+                    onCallStateChanged(
+                        NowBarItem(
+                            type = NowBarType.CALL,
+                            title = caller,
+                            subtitle = "Ringing...",
+                            isPersistent = true
+                        )
+                    )
+                }
+                TelephonyManager.CALL_STATE_OFFHOOK -> {
+                    callStartTime = System.currentTimeMillis()
+                    isTracking = true
+                    handler.post(tickerRunnable)
+                }
+                TelephonyManager.CALL_STATE_IDLE -> {
+                    isTracking = false
+                    handler.removeCallbacks(tickerRunnable)
+                    onCallStateChanged(null)
+                }
+            }
         }
+    }
 
+    fun start() {
         try {
-            @Suppress("DEPRECATION")
-            telephonyManager.listen(
-                listener,
-                android.telephony.PhoneStateListener.LISTEN_NONE
-            )
-        } catch (_: Exception) {
-        }
+            telephonyManager.listen(listener, PhoneStateListener.LISTEN_CALL_STATE)
+        } catch (_: Exception) {}
+    }
 
-        listening = false
+    fun stop() {
+        isTracking = false
+        handler.removeCallbacks(tickerRunnable)
+        try {
+            telephonyManager.listen(listener, PhoneStateListener.LISTEN_NONE)
+        } catch (_: Exception) {}
     }
 }

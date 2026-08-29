@@ -6,363 +6,90 @@ import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
-import com.thepurpleweb.purplelauncher.notifications.PurpleNotificationListenerService
 
 class NowBarMediaManager(
-    context: Context,
+    private val context: Context,
     private val onMediaChanged: (NowBarItem?) -> Unit
 ) {
+    private val sessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
+    private var activeController: MediaController? = null
 
-    private val appContext =
-        context.applicationContext
-
-    private val mediaSessionManager =
-        appContext.getSystemService(
-            Context.MEDIA_SESSION_SERVICE
-        ) as? MediaSessionManager
-
-    private val notificationListenerComponent =
-        ComponentName(
-            appContext,
-            PurpleNotificationListenerService::class.java
-        )
-
-    private var currentController:
-        MediaController? = null
-
-    private var started =
-        false
-
-    private val listener =
-        MediaSessionManager.OnActiveSessionsChangedListener { controllers ->
-
-            attachToBestController(
-                controllers
-            )
+    private val controllerCallback = object : MediaController.Callback() {
+        override fun onPlaybackStateChanged(state: PlaybackState?) {
+            updateMediaState()
         }
 
-    private val callback =
-        object : MediaController.Callback() {
-
-            override fun onMetadataChanged(
-                metadata: MediaMetadata?
-            ) {
-                publish(
-                    currentController
-                )
-            }
-
-            override fun onPlaybackStateChanged(
-                state: PlaybackState?
-            ) {
-                publish(
-                    currentController
-                )
-            }
-
-            override fun onSessionDestroyed() {
-
-                detachCurrentController()
-
-                refresh()
-            }
+        override fun onMetadataChanged(metadata: MediaMetadata?) {
+            updateMediaState()
         }
+    }
+
+    private val sessionListener = MediaSessionManager.OnActiveSessionsChangedListener { controllers ->
+        attachToActiveSession(controllers)
+    }
 
     fun start() {
-
-        if (started) {
-            refresh()
-            return
-        }
-
-        val manager =
-            mediaSessionManager
-
-        if (manager == null) {
-
-            onMediaChanged(null)
-
-            return
-        }
-
-        if (
-            !NowBarMediaAccess
-                .isNotificationListenerEnabled(
-                    appContext
-                )
-        ) {
-
-            onMediaChanged(null)
-
-            return
-        }
-
         try {
-
-            manager.addOnActiveSessionsChangedListener(
-                listener,
-                notificationListenerComponent
-            )
-
-            started =
-                true
-
-            refresh()
-
-        } catch (
-            _: SecurityException
-        ) {
-
-            started =
-                false
-
-            onMediaChanged(null)
-
-        } catch (
-            _: Exception
-        ) {
-
-            started =
-                false
-
+            val componentName = ComponentName(context, NotificationListenerBridge::class.java)
+            sessionManager?.addOnActiveSessionsChangedListener(sessionListener, componentName)
+            val initial = sessionManager?.getActiveSessions(componentName)
+            attachToActiveSession(initial)
+        } catch (_: Exception) {
             onMediaChanged(null)
         }
     }
 
     fun stop() {
-
-        val manager =
-            mediaSessionManager
-
-        if (manager != null && started) {
-
-            try {
-
-                manager.removeOnActiveSessionsChangedListener(
-                    listener
-                )
-
-            } catch (
-                _: Exception
-            ) {
-                // Ignore cleanup failures.
-            }
-        }
-
-        started =
-            false
-
-        detachCurrentController()
-    }
-
-    fun refresh() {
-
-        val manager =
-            mediaSessionManager
-
-        if (manager == null) {
-
-            onMediaChanged(null)
-
-            return
-        }
-
-        if (
-            !NowBarMediaAccess
-                .isNotificationListenerEnabled(
-                    appContext
-                )
-        ) {
-
-            detachCurrentController()
-
-            onMediaChanged(null)
-
-            return
-        }
-
         try {
-
-            val controllers =
-                manager.getActiveSessions(
-                    notificationListenerComponent
-                )
-
-            attachToBestController(
-                controllers
-            )
-
-        } catch (
-            _: SecurityException
-        ) {
-
-            detachCurrentController()
-
-            onMediaChanged(null)
-
-        } catch (
-            _: Exception
-        ) {
-
-            detachCurrentController()
-
-            onMediaChanged(null)
-        }
+            sessionManager?.removeOnActiveSessionsChangedListener(sessionListener)
+            activeController?.unregisterCallback(controllerCallback)
+            activeController = null
+        } catch (_: Exception) {}
     }
 
-    private fun attachToBestController(
-        controllers: List<MediaController>?
-    ) {
+    private fun attachToActiveSession(controllers: List<MediaController>?) {
+        activeController?.unregisterCallback(controllerCallback)
+        activeController = controllers?.firstOrNull { controller ->
+            val state = controller.playbackState?.state
+            state == PlaybackState.STATE_PLAYING || state == PlaybackState.STATE_BUFFERING
+        } ?: controllers?.firstOrNull()
 
-        val best =
-            controllers
-                ?.firstOrNull { controller ->
+        activeController?.registerCallback(controllerCallback)
+        updateMediaState()
+    }
 
-                    val state =
-                        controller.playbackState
-
-                    state != null &&
-                        (
-                            state.state ==
-                                PlaybackState.STATE_PLAYING ||
-                            state.state ==
-                                PlaybackState.STATE_PAUSED
-                        )
-                }
-
-        if (
-            best?.sessionToken ==
-            currentController?.sessionToken
-        ) {
-
-            publish(
-                currentController
-            )
-
+    private fun updateMediaState() {
+        val controller = activeController ?: run {
+            onMediaChanged(null)
             return
         }
 
-        detachCurrentController()
-
-        currentController =
-            best
-
-        currentController?.registerCallback(
-            callback
-        )
-
-        publish(
-            currentController
-        )
-    }
-
-    private fun detachCurrentController() {
-
-        currentController?.let { controller ->
-
-            try {
-
-                controller.unregisterCallback(
-                    callback
-                )
-
-            } catch (
-                _: Exception
-            ) {
-                // Ignore cleanup failures.
-            }
-        }
-
-        currentController =
-            null
-    }
-
-    private fun publish(
-        controller: MediaController?
-    ) {
-
-        if (controller == null) {
-
+        val state = controller.playbackState
+        val isPlaying = state?.state == PlaybackState.STATE_PLAYING
+        if (!isPlaying) {
             onMediaChanged(null)
-
             return
         }
 
-        val state =
-            controller.playbackState
+        val metadata = controller.metadata
+        val title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)?.ifEmpty { "Playing Media" } ?: "Playing Media"
+        val artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST)?.ifEmpty { "Unknown Artist" } ?: "Unknown Artist"
+        val duration = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
+        val position = state?.position ?: 0L
 
-        if (
-            state == null ||
-            (
-                state.state !=
-                    PlaybackState.STATE_PLAYING &&
-                state.state !=
-                    PlaybackState.STATE_PAUSED
-            )
-        ) {
-
-            onMediaChanged(null)
-
-            return
+        val progressPercent = if (duration > 0) {
+            ((position.toFloat() / duration.toFloat()) * 100).toInt().coerceIn(0, 100)
+        } else {
+            0
         }
-
-        val metadata =
-            controller.metadata
-
-        val title =
-            metadata
-                ?.getString(
-                    MediaMetadata.METADATA_KEY_TITLE
-                )
-                ?.takeIf {
-                    it.isNotBlank()
-                }
-                ?: "Now playing"
-
-        val artist =
-            metadata
-                ?.getString(
-                    MediaMetadata.METADATA_KEY_ARTIST
-                )
-                ?.takeIf {
-                    it.isNotBlank()
-                }
-
-        val isPlaying =
-            state.state ==
-                PlaybackState.STATE_PLAYING
-
-        val subtitle =
-            if (!artist.isNullOrBlank()) {
-
-                if (isPlaying) {
-                    artist
-                } else {
-                    "$artist • Paused"
-                }
-
-            } else {
-
-                if (isPlaying) {
-                    "Playing"
-                } else {
-                    "Paused"
-                }
-            }
 
         onMediaChanged(
             NowBarItem(
-                type =
-                    NowBarType.MUSIC,
-
-                title =
-                    title,
-
-                subtitle =
-                    subtitle,
-
-                isPersistent =
-                    true
+                type = NowBarType.MUSIC,
+                title = title,
+                subtitle = artist,
+                progress = progressPercent,
+                isPersistent = false
             )
         )
     }
