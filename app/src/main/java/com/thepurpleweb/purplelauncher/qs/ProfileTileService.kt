@@ -25,7 +25,7 @@ class ProfileTileService : TileService() {
             }
         }
 
-        profileEngine = ProfileEngine(applicationContext)
+        profileEngine = ProfileEngine.getInstance(applicationContext)
     }
 
     override fun onStartListening() {
