@@ -1,7 +1,5 @@
 package com.thepurpleweb.purplelauncher.nowbar
 
-import android.animation.AnimatorSet
-import android.animation.ObjectAnimator
 import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
@@ -28,13 +26,20 @@ class NowBarView(
     private val timeView =
         TextView(context)
 
-    private val primaryColumn =
+    private var primaryColumn =
         LinearLayout(context)
 
-    private val actionRow =
+    private var actionRow =
         LinearLayout(context)
 
-    private var currentProfile =
+    /*
+     * Explicit Profile type is important here.
+     *
+     * Without it Kotlin infers Profile.Calm from the
+     * initializer, which makes the other profiles appear
+     * to be incompatible types.
+     */
+    private var currentProfile: Profile =
         Profile.Calm
 
     private var expanded =
@@ -130,6 +135,8 @@ class NowBarView(
             currentProfile,
             quality
         )
+
+        updateContent()
     }
 
     private fun buildCollapsedContent() {
@@ -165,21 +172,26 @@ class NowBarView(
 
         titleView.apply {
 
-            textSize = 14f
+            textSize =
+                14f
 
-            maxLines = 1
+            maxLines =
+                1
         }
 
         subtitleView.apply {
 
-            textSize = 11f
+            textSize =
+                11f
 
-            maxLines = 1
+            maxLines =
+                1
         }
 
         timeView.apply {
 
-            textSize = 15f
+            textSize =
+                15f
 
             gravity =
                 Gravity.CENTER
@@ -206,7 +218,11 @@ class NowBarView(
         )
 
         addView(
-            primaryColumn
+            primaryColumn,
+            LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.WRAP_CONTENT
+            )
         )
     }
 
@@ -248,11 +264,13 @@ class NowBarView(
             }
 
         titleView.apply {
-            textSize = 16f
+            textSize =
+                16f
         }
 
         subtitleView.apply {
-            textSize = 12f
+            textSize =
+                12f
         }
 
         titleColumn.addView(
@@ -264,7 +282,8 @@ class NowBarView(
         )
 
         timeView.apply {
-            textSize = 16f
+            textSize =
+                16f
         }
 
         topRow.addView(
@@ -276,21 +295,19 @@ class NowBarView(
         )
 
         addView(
-            topRow
+            topRow,
+            LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.WRAP_CONTENT
+            )
         )
 
-        if (state.primary != null) {
-
-            addNowItem(
-                state.primary
-            )
+        state.primary?.let {
+            addNowItem(it)
         }
 
-        if (state.secondary != null) {
-
-            addNowItem(
-                state.secondary
-            )
+        state.secondary?.let {
+            addNowItem(it)
         }
 
         buildActionRow()
@@ -310,7 +327,8 @@ class NowBarView(
                         "${item.title}  •  ${item.subtitle}"
                     }
 
-                textSize = 13f
+                textSize =
+                    13f
 
                 setPadding(
                     0,
@@ -319,11 +337,16 @@ class NowBarView(
                     dp(4)
                 )
 
-                maxLines = 2
+                maxLines =
+                    2
             }
 
         addView(
-            row
+            row,
+            LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.WRAP_CONTENT
+            )
         )
     }
 
@@ -365,7 +388,11 @@ class NowBarView(
         }
 
         addView(
-            actionRow
+            actionRow,
+            LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.WRAP_CONTENT
+            )
         )
     }
 
@@ -377,9 +404,11 @@ class NowBarView(
         val button =
             TextView(context).apply {
 
-                text = label
+                text =
+                    label
 
-                textSize = 11f
+                textSize =
+                    11f
 
                 gravity =
                     Gravity.CENTER
@@ -391,7 +420,8 @@ class NowBarView(
                     dp(7)
                 )
 
-                isClickable = true
+                isClickable =
+                    true
 
                 setOnClickListener {
                     action()
@@ -410,25 +440,25 @@ class NowBarView(
 
     private fun updateContent() {
 
+        val calendar =
+            java.util.Calendar.getInstance()
+
         val hour =
-            java.util.Calendar
-                .getInstance()
-                .get(java.util.Calendar.HOUR_OF_DAY)
+            calendar.get(
+                java.util.Calendar.HOUR_OF_DAY
+            )
 
         val minute =
-            java.util.Calendar
-                .getInstance()
-                .get(java.util.Calendar.MINUTE)
+            calendar.get(
+                java.util.Calendar.MINUTE
+            )
 
-        val time =
+        timeView.text =
             String.format(
                 "%02d:%02d",
                 hour,
                 minute
             )
-
-        timeView.text =
-            time
 
         titleView.text =
             currentProfile.displayName
@@ -462,109 +492,187 @@ class NowBarView(
                 profile
             )
 
-        val background =
+        val backgroundColor =
             when (profile) {
 
                 Profile.Fluid ->
-                    Color.rgb(31, 22, 43)
+                    Color.rgb(
+                        31,
+                        22,
+                        43
+                    )
 
                 Profile.Premium ->
-                    Color.rgb(27, 26, 31)
+                    Color.rgb(
+                        27,
+                        26,
+                        31
+                    )
 
                 Profile.Calm ->
-                    Color.rgb(25, 25, 28)
+                    Color.rgb(
+                        25,
+                        25,
+                        28
+                    )
 
                 Profile.Focus ->
-                    Color.rgb(23, 26, 33)
+                    Color.rgb(
+                        23,
+                        26,
+                        33
+                    )
 
                 Profile.Expressive ->
-                    Color.rgb(39, 19, 48)
+                    Color.rgb(
+                        39,
+                        19,
+                        48
+                    )
             }
 
-        val primary =
+        val primaryColor =
             when (profile) {
 
                 Profile.Fluid ->
-                    Color.rgb(248, 244, 255)
+                    Color.rgb(
+                        248,
+                        244,
+                        255
+                    )
 
                 Profile.Premium ->
-                    Color.rgb(245, 243, 248)
+                    Color.rgb(
+                        245,
+                        243,
+                        248
+                    )
 
                 Profile.Calm ->
-                    Color.rgb(238, 238, 242)
+                    Color.rgb(
+                        238,
+                        238,
+                        242
+                    )
 
                 Profile.Focus ->
-                    Color.rgb(244, 246, 250)
+                    Color.rgb(
+                        244,
+                        246,
+                        250
+                    )
 
                 Profile.Expressive ->
-                    Color.rgb(255, 246, 255)
+                    Color.rgb(
+                        255,
+                        246,
+                        255
+                    )
             }
 
-        val secondary =
+        val secondaryColor =
             when (profile) {
 
                 Profile.Fluid ->
-                    Color.rgb(180, 166, 196)
+                    Color.rgb(
+                        180,
+                        166,
+                        196
+                    )
 
                 Profile.Premium ->
-                    Color.rgb(163, 160, 170)
+                    Color.rgb(
+                        163,
+                        160,
+                        170
+                    )
 
                 Profile.Calm ->
-                    Color.rgb(145, 145, 152)
+                    Color.rgb(
+                        145,
+                        145,
+                        152
+                    )
 
                 Profile.Focus ->
-                    Color.rgb(145, 151, 163)
+                    Color.rgb(
+                        145,
+                        151,
+                        163
+                    )
 
                 Profile.Expressive ->
-                    Color.rgb(190, 158, 201)
+                    Color.rgb(
+                        190,
+                        158,
+                        201
+                    )
             }
 
-        val accent =
+        val accentColor =
             when (profile) {
 
                 Profile.Fluid ->
-                    Color.rgb(190, 105, 255)
+                    Color.rgb(
+                        190,
+                        105,
+                        255
+                    )
 
                 Profile.Premium ->
-                    Color.rgb(205, 177, 255)
+                    Color.rgb(
+                        205,
+                        177,
+                        255
+                    )
 
                 Profile.Calm ->
-                    Color.rgb(170, 125, 210)
+                    Color.rgb(
+                        170,
+                        125,
+                        210
+                    )
 
                 Profile.Focus ->
-                    Color.rgb(169, 116, 255)
+                    Color.rgb(
+                        169,
+                        116,
+                        255
+                    )
 
                 Profile.Expressive ->
-                    Color.rgb(221, 91, 255)
+                    Color.rgb(
+                        221,
+                        91,
+                        255
+                    )
             }
-
-        background =
-            background
 
         titleView.setTextColor(
-            primary
+            primaryColor
         )
 
         subtitleView.setTextColor(
-            secondary
+            secondaryColor
         )
 
         timeView.setTextColor(
-            accent
+            accentColor
         )
 
-        for (i in 0 until actionRow.childCount) {
+        for (
+            i in 0 until actionRow.childCount
+        ) {
 
-            actionRow
-                .getChildAt(i)
-                .let { child ->
+            val child =
+                actionRow.getChildAt(i)
 
-                    if (child is TextView) {
-                        child.setTextColor(
-                            accent
-                        )
-                    }
-                }
+            if (child is TextView) {
+
+                child.setTextColor(
+                    accentColor
+                )
+            }
         }
 
         val radius =
@@ -572,14 +680,11 @@ class NowBarView(
                 .toFloat()
                 .coerceAtLeast(12f)
 
-        background =
-            background
-
         this.background =
             GradientDrawable().apply {
 
                 setColor(
-                    background
+                    backgroundColor
                 )
 
                 cornerRadius =
@@ -625,7 +730,8 @@ class NowBarView(
                             subtitle =
                                 "Now Bar active"
                         ),
-                    expanded = true
+                    expanded =
+                        true
                 )
             )
 
@@ -641,7 +747,9 @@ class NowBarView(
         updateContent()
     }
 
-    private fun dp(value: Int): Int =
+    private fun dp(
+        value: Int
+    ): Int =
         (
             value *
                 resources

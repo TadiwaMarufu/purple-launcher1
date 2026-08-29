@@ -72,17 +72,17 @@ class AdaptiveIntelligence(
 
         when (profile) {
 
-            Profile.FOCUS -> {
+            Profile.Focus -> {
                 recommendations +=
                     IntelligenceRecommendation.EmphasizeProductivity
             }
 
-            Profile.CALM -> {
+            Profile.Calm -> {
                 recommendations +=
                     IntelligenceRecommendation.QuietPresentation
             }
 
-            Profile.FLUID -> {
+            Profile.Fluid -> {
                 if (
                     preferences.isEnabled(
                         IntelligenceSignal.MEDIA
@@ -94,12 +94,12 @@ class AdaptiveIntelligence(
                 }
             }
 
-            Profile.PREMIUM -> {
+            Profile.Premium -> {
                 recommendations +=
                     IntelligenceRecommendation.ShowCurrentProfile
             }
 
-            Profile.EXPRESSIVE -> {
+            Profile.Expressive -> {
                 recommendations +=
                     IntelligenceRecommendation.ShowCurrentProfile
             }
