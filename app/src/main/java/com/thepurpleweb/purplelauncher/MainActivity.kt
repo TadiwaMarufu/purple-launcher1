@@ -115,7 +115,12 @@ class MainActivity : AppCompatActivity() {
         setupWidgetArea()
 
         profileLabel.setOnClickListener {
-            profileEngine.cycleNext()
+            startActivity(
+                Intent(
+                    this,
+                    com.thepurpleweb.purplelauncher.profile.ProfilesActivity::class.java
+                )
+            )
         }
 
         loadCuratedAppsAsync()

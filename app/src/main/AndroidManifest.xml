@@ -12,6 +12,10 @@
             android:exported="false" />
 
         <activity
+            android:name=".profile.ProfilesActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".notifications.NotificationCenterActivity"
             android:exported="false" />
 

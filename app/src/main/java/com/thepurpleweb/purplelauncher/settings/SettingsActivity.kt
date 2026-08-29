@@ -84,6 +84,42 @@ class SettingsActivity : AppCompatActivity() {
         root.addView(title)
         root.addView(subtitle)
 
+        val profilesButton =
+            TextView(this).apply {
+                text = "Profiles"
+                textSize = 17f
+                setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(
+                    dp(18),
+                    dp(16),
+                    dp(18),
+                    dp(16)
+                )
+
+                setBackgroundColor(
+                    Color.rgb(
+                        45,
+                        32,
+                        55
+                    )
+                )
+
+                isClickable = true
+                isFocusable = true
+
+                setOnClickListener {
+                    startActivity(
+                        android.content.Intent(
+                            this@SettingsActivity,
+                            com.thepurpleweb.purplelauncher.profile.ProfilesActivity::class.java
+                        )
+                    )
+                }
+            }
+
+        root.addView(profilesButton)
+
         addSection(
             root,
             "HOME"
