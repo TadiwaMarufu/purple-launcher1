@@ -65,6 +65,7 @@ class NowBarView @JvmOverloads constructor(
     }
 
     private var isExpanded = false
+    private var currentItem: NowBarItem? = null
     private var onSearchClick: (() -> Unit)? = null
     private var onProfileClick: (() -> Unit)? = null
     private var onNotificationsClick: (() -> Unit)? = null
@@ -121,6 +122,8 @@ class NowBarView @JvmOverloads constructor(
     }
 
     fun setState(item: NowBarItem?, quality: VisualQuality) {
+        currentItem = item
+
         if (item == null) {
             titleView.text = "Purple Launcher"
             subtitleView.text = "Idle"
@@ -129,7 +132,7 @@ class NowBarView @JvmOverloads constructor(
         }
 
         titleView.text = item.title
-        subtitleView.text = item.subtitle.ifEmpty { item.type.name }
+        subtitleView.text = item.subtitle?.ifEmpty { item.type.name } ?: item.type.name
 
         if (item.progress != null && item.progress >= 0) {
             progressBar.progress = item.progress
@@ -149,6 +152,12 @@ class NowBarView @JvmOverloads constructor(
 
     private fun toggleExpand() {
         isExpanded = !isExpanded
-        expandedContent.visibility = if (isExpanded) View.VISIBLE else View.GONE
+        if (isExpanded && currentItem != null) {
+            expandedDetailText.text = "Type: ${currentItem?.type?.name} • Persistent: ${currentItem?.isPersistent}"
+            expandedDetailText.visibility = View.VISIBLE
+            expandedContent.visibility = View.VISIBLE
+        } else {
+            expandedContent.visibility = View.GONE
+        }
     }
 }

@@ -216,7 +216,7 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             nowBarController.state.collect { state ->
-                nowBarView.setState(state, determineVisualQuality())
+                nowBarView.setState(state.primary, determineVisualQuality())
             }
         }
 
