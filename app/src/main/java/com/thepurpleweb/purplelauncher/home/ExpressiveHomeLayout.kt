@@ -1,0 +1,85 @@
+package com.thepurpleweb.purplelauncher.home
+
+import android.view.Gravity
+import android.view.ViewGroup
+import android.widget.GridView
+import android.widget.LinearLayout
+import android.widget.TextView
+import com.thepurpleweb.purplelauncher.apps.AppInfo
+import com.thepurpleweb.purplelauncher.apps.HomeAppAdapter
+
+class ExpressiveHomeLayout : HomeLayout {
+
+    override fun build(
+        container: ViewGroup,
+        apps: List<AppInfo>,
+        onAppClick: (AppInfo) -> Unit
+    ) {
+        container.removeAllViews()
+
+        val context = container.context
+        val visuals = ProfileVisualsProvider.forMotion(MotionStyle.EXPRESSIVE)
+
+        container.setBackgroundColor(visuals.background)
+
+        val root = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(
+                ProfileVisualsProvider.dp(this, visuals.horizontalPaddingDp),
+                ProfileVisualsProvider.dp(this, 8),
+                ProfileVisualsProvider.dp(this, visuals.horizontalPaddingDp),
+                0
+            )
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        }
+
+        val title = TextView(context).apply {
+            text = "EXPRESS"
+            textSize = visuals.titleSizeSp
+            setTextColor(visuals.primaryText)
+            gravity = Gravity.CENTER
+            letterSpacing = 0.08f
+        }
+
+        val subtitle = TextView(context).apply {
+            text = "Break the grid."
+            textSize = visuals.bodySizeSp
+            setTextColor(visuals.secondaryText)
+            gravity = Gravity.CENTER
+            setPadding(
+                0,
+                ProfileVisualsProvider.dp(this, 2),
+                0,
+                ProfileVisualsProvider.dp(this, 14)
+            )
+        }
+
+        val grid = GridView(context).apply {
+            numColumns = 3
+            verticalSpacing = ProfileVisualsProvider.dp(this, 22)
+            horizontalSpacing = ProfileVisualsProvider.dp(this, 10)
+            stretchMode = GridView.STRETCH_COLUMN_WIDTH
+            gravity = Gravity.CENTER
+            clipToPadding = false
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            )
+            adapter = HomeAppAdapter(context, apps, onAppClick)
+        }
+
+        root.addView(title)
+        root.addView(subtitle)
+        root.addView(grid)
+
+        container.addView(root)
+
+        ProfileVisualsProvider.animate(root, MotionStyle.EXPRESSIVE)
+        ProfileVisualsProvider.animateChildren(grid, MotionStyle.EXPRESSIVE)
+    }
+}

@@ -6,10 +6,6 @@ import android.widget.GridView
 import com.thepurpleweb.purplelauncher.apps.AppInfo
 import com.thepurpleweb.purplelauncher.apps.HomeAppAdapter
 
-/**
- * Calm: minimal information surface. A quiet curated grid,
- * generous whitespace, no extra chrome.
- */
 class CalmHomeLayout : HomeLayout {
 
     override fun build(
@@ -20,10 +16,14 @@ class CalmHomeLayout : HomeLayout {
         container.removeAllViews()
 
         val context = container.context
+        val visuals = ProfileVisualsProvider.forMotion(MotionStyle.CALM)
+
+        container.setBackgroundColor(visuals.background)
 
         val gridView = GridView(context).apply {
             numColumns = 4
-            verticalSpacing = dp(context, 16)
+            verticalSpacing = ProfileVisualsProvider.dp(this, 16)
+            horizontalSpacing = ProfileVisualsProvider.dp(this, 4)
             gravity = Gravity.CENTER
             clipToPadding = false
             layoutParams = ViewGroup.LayoutParams(
@@ -34,8 +34,8 @@ class CalmHomeLayout : HomeLayout {
         }
 
         container.addView(gridView)
-    }
 
-    private fun dp(context: android.content.Context, value: Int): Int =
-        (value * context.resources.displayMetrics.density).toInt()
+        ProfileVisualsProvider.animate(gridView, MotionStyle.CALM)
+        ProfileVisualsProvider.animateChildren(gridView, MotionStyle.CALM)
+    }
 }

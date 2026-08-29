@@ -1,16 +1,15 @@
 package com.thepurpleweb.purplelauncher.home
 
 import android.graphics.Color
-import android.text.format.DateFormat
+import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.LinearLayout
-import android.widget.ListView
 import android.widget.TextView
 import com.thepurpleweb.purplelauncher.apps.AppInfo
-import com.thepurpleweb.purplelauncher.search.SearchResultAdapter
-import java.util.Calendar
+import com.thepurpleweb.purplelauncher.apps.HomeAppAdapter
+import android.widget.GridView
 
-class FocusHomeLayout : HomeLayout {
+class FluidHomeLayout : HomeLayout {
 
     override fun build(
         container: ViewGroup,
@@ -20,15 +19,16 @@ class FocusHomeLayout : HomeLayout {
         container.removeAllViews()
 
         val context = container.context
-        val visuals = ProfileVisualsProvider.forMotion(MotionStyle.FOCUS)
+        val visuals = ProfileVisualsProvider.forMotion(MotionStyle.FLUID)
 
         container.setBackgroundColor(visuals.background)
 
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
             setPadding(
                 ProfileVisualsProvider.dp(this, visuals.horizontalPaddingDp),
-                8,
+                ProfileVisualsProvider.dp(this, 12),
                 ProfileVisualsProvider.dp(this, visuals.horizontalPaddingDp),
                 0
             )
@@ -38,38 +38,44 @@ class FocusHomeLayout : HomeLayout {
             )
         }
 
-        val clock = TextView(context).apply {
-            text = DateFormat.format("h:mm a", Calendar.getInstance()).toString()
+        val title = TextView(context).apply {
+            text = "Flow"
             textSize = visuals.titleSizeSp
             setTextColor(visuals.primaryText)
-            setPadding(0, 0, 0, ProfileVisualsProvider.dp(this, 4))
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, ProfileVisualsProvider.dp(this, 6))
         }
 
-        val label = TextView(context).apply {
-            text = "Your apps"
+        val subtitle = TextView(context).apply {
+            text = "Everything where it naturally belongs."
             textSize = visuals.bodySizeSp
             setTextColor(visuals.secondaryText)
-            setPadding(0, 0, 0, ProfileVisualsProvider.dp(this, 12))
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, ProfileVisualsProvider.dp(this, 18))
         }
 
-        val listView = ListView(context).apply {
+        val grid = GridView(context).apply {
+            numColumns = 4
+            verticalSpacing = ProfileVisualsProvider.dp(this, 18)
+            horizontalSpacing = ProfileVisualsProvider.dp(this, 6)
+            stretchMode = GridView.STRETCH_COLUMN_WIDTH
+            gravity = Gravity.CENTER
+            clipToPadding = false
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0,
                 1f
             )
-            divider = null
-            dividerHeight = 0
-            adapter = SearchResultAdapter(context, apps, onAppClick)
+            adapter = HomeAppAdapter(context, apps, onAppClick)
         }
 
-        root.addView(clock)
-        root.addView(label)
-        root.addView(listView)
+        root.addView(title)
+        root.addView(subtitle)
+        root.addView(grid)
 
         container.addView(root)
 
-        ProfileVisualsProvider.animate(root, MotionStyle.FOCUS)
-        ProfileVisualsProvider.animateChildren(listView, MotionStyle.FOCUS)
+        ProfileVisualsProvider.animate(root, MotionStyle.FLUID)
+        ProfileVisualsProvider.animateChildren(grid, MotionStyle.FLUID)
     }
 }
