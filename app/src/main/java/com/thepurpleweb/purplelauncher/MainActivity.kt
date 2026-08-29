@@ -200,7 +200,6 @@ class MainActivity : AppCompatActivity() {
         appWidgetHost.startListening()
 
         if (::nowBarCoordinator.isInitialized) {
-            nowBarCoordinator.start()
         }
 
         if (::nowBarMediaManager.isInitialized) {
@@ -217,7 +216,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (::nowBarCoordinator.isInitialized) {
-            nowBarCoordinator.stop()
         }
 
         appWidgetHost.stopListening()
@@ -304,16 +302,13 @@ class MainActivity : AppCompatActivity() {
                 this
             )
 
-            NowBarCoordinator(
                 this,
                 nowBarController
             )
 
-            NowBarTimerManager { timerItem ->
 
                 runOnUiThread {
 
-                    nowBarCoordinator.setTimer(
                         timerItem
                     )
 
@@ -330,13 +325,11 @@ class MainActivity : AppCompatActivity() {
 
                     if (mediaItem != null) {
 
-                        nowBarCoordinator.setMedia(
                             mediaItem
                         )
 
                     } else {
 
-                        nowBarCoordinator.setMedia(
                             null
                         )
                     }
