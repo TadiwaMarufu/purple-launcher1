@@ -3,13 +3,14 @@ package com.thepurpleweb.purplelauncher.profile
 import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.thepurpleweb.purplelauncher.MainActivity
 import com.thepurpleweb.purplelauncher.R
-import com.thepurpleweb.purplelauncher.home.HomeLayoutFactory
 
 class ProfilesActivity : AppCompatActivity() {
 
@@ -28,7 +29,7 @@ class ProfilesActivity : AppCompatActivity() {
         super.onResume()
 
         if (::profileEngine.isInitialized && ::listContainer.isInitialized) {
-            rebuildProfileList()
+            renderProfiles()
         }
     }
 
@@ -36,7 +37,12 @@ class ProfilesActivity : AppCompatActivity() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(Color.rgb(18, 18, 18))
-            setPadding(dp(20), dp(32), dp(20), dp(32))
+            setPadding(
+                dp(20),
+                dp(32),
+                dp(20),
+                dp(32)
+            )
         }
 
         val title = TextView(this).apply {
@@ -46,10 +52,10 @@ class ProfilesActivity : AppCompatActivity() {
         }
 
         val subtitle = TextView(this).apply {
-            text = "Choose how Purple Launcher feels and behaves."
+            text = "Choose how Purple Launcher feels."
             textSize = 15f
-            setTextColor(Color.rgb(165, 165, 165))
-            setPadding(0, dp(6), 0, dp(24))
+            setTextColor(Color.rgb(170, 170, 170))
+            setPadding(0, dp(8), 0, dp(28))
         }
 
         listContainer = LinearLayout(this).apply {
@@ -60,49 +66,67 @@ class ProfilesActivity : AppCompatActivity() {
         root.addView(subtitle)
         root.addView(listContainer)
 
-        val scroll = ScrollView(this).apply {
+        val scrollView = ScrollView(this).apply {
             addView(root)
         }
 
-        setContentView(scroll)
+        setContentView(scrollView)
 
-        rebuildProfileList()
+        renderProfiles()
     }
 
-    private fun rebuildProfileList() {
+    private fun renderProfiles() {
         listContainer.removeAllViews()
 
         val current = profileEngine.current.value
 
         Profile.all.forEach { profile ->
+
             val selected = profile.id == current.id
 
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(18), dp(16), dp(18), dp(16))
+                setPadding(
+                    dp(18),
+                    dp(16),
+                    dp(18),
+                    dp(16)
+                )
 
                 setBackgroundColor(
                     if (selected) {
-                        Color.rgb(55, 38, 70)
+                        Color.rgb(55, 35, 70)
                     } else {
                         Color.rgb(28, 28, 28)
                     }
                 )
 
+                isClickable = true
+                isFocusable = true
+
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
                 ).apply {
-                    bottomMargin = dp(10)
+                    setMargins(
+                        0,
+                        dp(6),
+                        0,
+                        dp(6)
+                    )
                 }
-
-                isClickable = true
-                isFocusable = true
 
                 setOnClickListener {
                     profileEngine.setProfile(profile)
-                    rebuildProfileList()
+
+                    // Immediately update the selector state.
+                    renderProfiles()
+
+                    // Return to the launcher so the newly selected
+                    // profile is visible immediately.
+                    setResult(RESULT_OK)
+                    finish()
                 }
             }
 
@@ -114,13 +138,19 @@ class ProfilesActivity : AppCompatActivity() {
                 }
 
                 textSize = 18f
-                setTextColor(Color.WHITE)
+                setTextColor(
+                    if (selected) {
+                        Color.rgb(210, 170, 255)
+                    } else {
+                        Color.WHITE
+                    }
+                )
             }
 
             val description = TextView(this).apply {
-                text = descriptionFor(profile)
+                text = profileDescription(profile)
                 textSize = 13f
-                setTextColor(Color.rgb(155, 155, 155))
+                setTextColor(Color.rgb(150, 150, 150))
                 setPadding(0, dp(5), 0, 0)
             }
 
@@ -131,25 +161,28 @@ class ProfilesActivity : AppCompatActivity() {
         }
     }
 
-    private fun descriptionFor(profile: Profile): String {
+    private fun profileDescription(profile: Profile): String {
         return when (profile) {
             Profile.Fluid ->
-                "Smooth, flexible everyday launcher experience."
+                "Smooth, adaptive and flowing."
 
             Profile.Premium ->
-                "Refined, polished experience with a richer visual feel."
+                "Polished, refined and expressive."
 
             Profile.Calm ->
-                "Minimal, quiet and distraction-free."
+                "Quiet, minimal and distraction-free."
 
             Profile.Focus ->
-                "Productivity-oriented layout designed for fast navigation."
+                "Structured for productivity and concentration."
 
             Profile.Expressive ->
-                "More visual personality, motion and customization."
+                "Bold, energetic and highly visual."
         }
     }
 
-    private fun dp(value: Int): Int =
-        (value * resources.displayMetrics.density).toInt()
+    private fun dp(value: Int): Int {
+        return (
+            value * resources.displayMetrics.density
+        ).toInt()
+    }
 }
