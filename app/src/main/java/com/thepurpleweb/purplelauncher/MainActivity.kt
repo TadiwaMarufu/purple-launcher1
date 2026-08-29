@@ -26,6 +26,7 @@ import com.thepurpleweb.purplelauncher.nowbar.NowBarController
 import com.thepurpleweb.purplelauncher.nowbar.NowBarItem
 import com.thepurpleweb.purplelauncher.nowbar.NowBarType
 import com.thepurpleweb.purplelauncher.nowbar.NowBarView
+import com.thepurpleweb.purplelauncher.nowbar.NowBarMediaManager
 import com.thepurpleweb.purplelauncher.performance.DevicePerformance
 import com.thepurpleweb.purplelauncher.performance.VisualQuality
 import com.thepurpleweb.purplelauncher.profile.Profile
@@ -58,6 +59,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var nowBarController: NowBarController
     private lateinit var nowBarView: NowBarView
+    private lateinit var nowBarMediaManager: NowBarMediaManager
 
     private var currentWidgetView: AppWidgetHostView? = null
     private var pendingProvider: AppWidgetProviderInfo? = null
@@ -283,6 +285,63 @@ class MainActivity : AppCompatActivity() {
             NowBarView(
                 this
             )
+
+        nowBarMediaManager =
+            NowBarMediaManager(
+                this
+            ) { mediaItem ->
+
+                runOnUiThread {
+
+                    val quality =
+                        determineVisualQuality()
+
+                    if (mediaItem != null) {
+
+                        nowBarController.setPrimary(
+                            mediaItem
+                        )
+
+                    } else {
+
+                        nowBarController.setPrimary(
+                            NowBarItem(
+                                type =
+                                    NowBarType.IDLE,
+
+                                title =
+                                    profileEngine.current.value.displayName,
+
+                                subtitle =
+                                    when (
+                                        profileEngine.current.value
+                                    ) {
+
+                                        Profile.Fluid ->
+                                            "Living environment"
+
+                                        Profile.Premium ->
+                                            "Refined environment"
+
+                                        Profile.Calm ->
+                                            "Quiet environment"
+
+                                        Profile.Focus ->
+                                            "Productive environment"
+
+                                        Profile.Expressive ->
+                                            "Creative environment"
+                                    }
+                            )
+                        )
+                    }
+
+                    nowBarView.setState(
+                        nowBarController.state.value,
+                        quality
+                    )
+                }
+            }
 
         nowBarView.setActions(
 
@@ -854,6 +913,26 @@ class MainActivity : AppCompatActivity() {
             null
 
         widgetRepository.clearWidgetId()
+    }
+
+    override fun onStart() {
+
+        super.onStart()
+
+        if (::nowBarMediaManager.isInitialized) {
+
+            nowBarMediaManager.start()
+        }
+    }
+
+    override fun onStop() {
+
+        if (::nowBarMediaManager.isInitialized) {
+
+            nowBarMediaManager.stop()
+        }
+
+        super.onStop()
     }
 
     // ---------------------------------------------------------
