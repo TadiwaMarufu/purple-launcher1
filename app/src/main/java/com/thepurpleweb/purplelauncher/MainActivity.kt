@@ -9,16 +9,12 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.MotionEvent
 import android.widget.FrameLayout
-import android.widget.GridView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.thepurpleweb.purplelauncher.apps.AppInfo
 import com.thepurpleweb.purplelauncher.apps.AppRepository
-import com.thepurpleweb.purplelauncher.dock.DockAdapter
-import com.thepurpleweb.purplelauncher.dock.DockEditorActivity
-import com.thepurpleweb.purplelauncher.dock.DockRepository
 import com.thepurpleweb.purplelauncher.drawer.AppDrawerActivity
 import com.thepurpleweb.purplelauncher.gestures.GestureAction
 import com.thepurpleweb.purplelauncher.gestures.GestureRepository
@@ -26,6 +22,12 @@ import com.thepurpleweb.purplelauncher.gestures.LauncherGestureDetector
 import com.thepurpleweb.purplelauncher.home.HomeLayoutFactory
 import com.thepurpleweb.purplelauncher.intelligence.IntelligenceManager
 import com.thepurpleweb.purplelauncher.notifications.NotificationCenterActivity
+import com.thepurpleweb.purplelauncher.nowbar.NowBarController
+import com.thepurpleweb.purplelauncher.nowbar.NowBarItem
+import com.thepurpleweb.purplelauncher.nowbar.NowBarType
+import com.thepurpleweb.purplelauncher.nowbar.NowBarView
+import com.thepurpleweb.purplelauncher.performance.DevicePerformance
+import com.thepurpleweb.purplelauncher.performance.VisualQuality
 import com.thepurpleweb.purplelauncher.profile.Profile
 import com.thepurpleweb.purplelauncher.profile.ProfileEngine
 import com.thepurpleweb.purplelauncher.search.SearchActivity
@@ -40,7 +42,6 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var profileEngine: ProfileEngine
     private lateinit var appRepository: AppRepository
-    private lateinit var dockRepository: DockRepository
     private lateinit var gestureRepository: GestureRepository
     private lateinit var gestureDetector: LauncherGestureDetector
 
@@ -51,40 +52,54 @@ class MainActivity : AppCompatActivity() {
     private lateinit var appWidgetHost: AppWidgetHost
     private lateinit var widgetContainer: FrameLayout
 
+    private lateinit var profileLabel: TextView
+    private lateinit var homeContentContainer: FrameLayout
+    private lateinit var nowbarContainer: FrameLayout
+
+    private lateinit var nowBarController: NowBarController
+    private lateinit var nowBarView: NowBarView
+
     private var currentWidgetView: AppWidgetHostView? = null
     private var pendingProvider: AppWidgetProviderInfo? = null
 
-    private lateinit var profileLabel: TextView
-    private lateinit var homeContentContainer: FrameLayout
-    private lateinit var dockGrid: GridView
-    private lateinit var dockAdapter: DockAdapter
+    private var curatedApps: List<AppInfo> =
+        emptyList()
 
-    private var curatedApps: List<AppInfo> = emptyList()
+    private val curatedPackageHints =
+        listOf(
+            "com.android.dialer",
+            "com.google.android.dialer",
+            "com.android.mms",
+            "com.google.android.apps.messaging",
+            "com.android.camera",
+            "com.google.android.GoogleCamera",
+            "com.android.settings",
+            "com.android.chrome",
+            "org.mozilla.firefox",
+            "com.android.vending"
+        )
 
-    private val curatedPackageHints = listOf(
-        "com.android.dialer",
-        "com.google.android.dialer",
-        "com.android.mms",
-        "com.google.android.apps.messaging",
-        "com.android.camera",
-        "com.google.android.GoogleCamera",
-        "com.android.settings",
-        "com.android.chrome",
-        "org.mozilla.firefox",
-        "com.android.vending"
-    )
-
-    override fun onCreate(savedInstanceState: Bundle?) {
+    override fun onCreate(
+        savedInstanceState: Bundle?
+    ) {
 
         Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
+
             try {
-                val sw = StringWriter()
-                throwable.printStackTrace(PrintWriter(sw))
+
+                val sw =
+                    StringWriter()
+
+                throwable.printStackTrace(
+                    PrintWriter(sw)
+                )
 
                 File(
                     getExternalFilesDir(null),
                     "crash_log.txt"
-                ).writeText(sw.toString())
+                ).writeText(
+                    sw.toString()
+                )
 
             } catch (_: Exception) {
             }
@@ -94,8 +109,13 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        super.onCreate(
+            savedInstanceState
+        )
+
+        setContentView(
+            R.layout.activity_main
+        )
 
         profileEngine =
             ProfileEngine.getInstance(
@@ -104,11 +124,6 @@ class MainActivity : AppCompatActivity() {
 
         appRepository =
             AppRepository(
-                applicationContext
-            )
-
-        dockRepository =
-            DockRepository(
                 applicationContext
             )
 
@@ -128,7 +143,9 @@ class MainActivity : AppCompatActivity() {
             )
 
         appWidgetManager =
-            AppWidgetManager.getInstance(this)
+            AppWidgetManager.getInstance(
+                this
+            )
 
         appWidgetHost =
             AppWidgetHost(
@@ -146,25 +163,22 @@ class MainActivity : AppCompatActivity() {
                 R.id.home_content_container
             )
 
-        dockGrid =
-            findViewById(
-                R.id.dock_grid
-            )
-
         widgetContainer =
             findViewById(
                 R.id.widget_container
             )
 
-        /*
-         * Dock, gestures, widgets, and intelligence
-         * initialize independently from the app list.
-         */
-        setupDock()
+        nowbarContainer =
+            findViewById(
+                R.id.nowbar_container
+            )
+
+        setupNowBar()
         setupGestures()
         setupWidgetArea()
 
         profileLabel.setOnClickListener {
+
             startActivity(
                 Intent(
                     this,
@@ -178,43 +192,38 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onStart() {
+
         super.onStart()
 
         appWidgetHost.startListening()
     }
 
     override fun onStop() {
+
         super.onStop()
 
         appWidgetHost.stopListening()
     }
 
-    override fun onResume() {
-        super.onResume()
-
-        if (::dockRepository.isInitialized) {
-            refreshDock()
-        }
-    }
-
     /*
-     * IMPORTANT:
+     * Gesture detection remains at Activity level.
      *
-     * Gesture detection is performed at Activity level.
-     *
-     * Do not move this back to a root-view OnTouchListener.
-     * The home screen contains clickable/scrollable children
-     * which can consume those touch events.
+     * Do not move this to a root OnTouchListener.
      */
     override fun dispatchTouchEvent(
         ev: MotionEvent
     ): Boolean {
 
         if (::gestureDetector.isInitialized) {
-            gestureDetector.onTouchEvent(ev)
+
+            gestureDetector.onTouchEvent(
+                ev
+            )
         }
 
-        return super.dispatchTouchEvent(ev)
+        return super.dispatchTouchEvent(
+            ev
+        )
     }
 
     private fun loadCuratedAppsAsync() {
@@ -228,7 +237,8 @@ class MainActivity : AppCompatActivity() {
             curatedApps =
                 allApps
                     .filter {
-                        it.packageName in curatedPackageHints
+                        it.packageName in
+                            curatedPackageHints
                     }
                     .ifEmpty {
                         allApps.take(8)
@@ -261,53 +271,118 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ---------------------------------------------------------
-    // DOCK
+    // NOW BAR
     // ---------------------------------------------------------
 
-    private fun setupDock() {
+    private fun setupNowBar() {
 
-        dockRepository.ensureDefaultDock()
-        dockRepository.removeMissingApps()
+        nowBarController =
+            NowBarController()
 
-        dockAdapter =
-            DockAdapter(
-                this,
-                dockRepository.getDockApps(),
-
-                onAppClick = { app ->
-
-                    appRepository.launchApp(
-                        app.packageName
-                    )
-                },
-
-                onAppLongClick = {
-
-                    startActivity(
-                        Intent(
-                            this,
-                            DockEditorActivity::class.java
-                        )
-                    )
-
-                    true
-                }
+        nowBarView =
+            NowBarView(
+                this
             )
 
-        dockGrid.adapter = dockAdapter
+        nowBarView.setActions(
+
+            onSwitchProfile = {
+
+                profileEngine.cycleNext()
+            },
+
+            onSearch = {
+
+                startActivity(
+                    Intent(
+                        this,
+                        SearchActivity::class.java
+                    )
+                )
+            },
+
+            onNotifications = {
+
+                openNotifications()
+            }
+        )
+
+        nowbarContainer.removeAllViews()
+
+        nowbarContainer.addView(
+            nowBarView,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        nowBarController.setPrimary(
+            NowBarItem(
+                type = NowBarType.IDLE,
+                title = "Ready",
+                subtitle = "Purple Now Bar"
+            )
+        )
     }
 
-    private fun refreshDock() {
+    private fun updateNowBar(
+        profile: Profile
+    ) {
 
-        if (!::dockAdapter.isInitialized) {
-            return
-        }
+        val quality =
+            determineVisualQuality()
 
-        dockRepository.removeMissingApps()
-
-        dockAdapter.updateApps(
-            dockRepository.getDockApps()
+        nowBarView.setProfile(
+            profile,
+            quality
         )
+
+        nowBarController.setPrimary(
+            NowBarItem(
+                type =
+                    NowBarType.IDLE,
+                title =
+                    profile.displayName,
+                subtitle =
+                    when (profile) {
+
+                        Profile.Fluid ->
+                            "Living environment"
+
+                        Profile.Premium ->
+                            "Refined environment"
+
+                        Profile.Calm ->
+                            "Quiet environment"
+
+                        Profile.Focus ->
+                            "Productive environment"
+
+                        Profile.Expressive ->
+                            "Creative environment"
+                    }
+            )
+        )
+
+        nowBarView.setState(
+            nowBarController.state.value,
+            quality
+        )
+    }
+
+    private fun determineVisualQuality():
+        VisualQuality {
+
+        return try {
+
+            DevicePerformance
+                .visualQuality(this)
+
+        } catch (_: Exception) {
+
+            VisualQuality.MEDIUM
+        }
     }
 
     // ---------------------------------------------------------
@@ -334,7 +409,6 @@ class MainActivity : AppCompatActivity() {
         when (action) {
 
             GestureAction.NONE -> {
-                // No action.
             }
 
             GestureAction.OPEN_APP_DRAWER -> {
@@ -393,21 +467,6 @@ class MainActivity : AppCompatActivity() {
     // ADAPTIVE INTELLIGENCE
     // ---------------------------------------------------------
 
-    /*
-     * Phase 17:
-     *
-     * Adaptive Intelligence is deliberately kept separate
-     * from the UI.
-     *
-     * The engine evaluates the current profile and local
-     * device context and produces recommendations.
-     *
-     * It does NOT directly manipulate the home screen,
-     * dock, widgets, or notifications.
-     *
-     * Future presentation layers such as the profile-aware
-     * Now Bar can consume these recommendations.
-     */
     private fun evaluateIntelligence(
         profile: Profile
     ) {
@@ -419,13 +478,6 @@ class MainActivity : AppCompatActivity() {
             )
 
         } catch (_: Exception) {
-
-            /*
-             * Intelligence is optional.
-             *
-             * A failure here must never bring down
-             * the launcher home screen.
-             */
         }
     }
 
@@ -437,7 +489,9 @@ class MainActivity : AppCompatActivity() {
 
         widgetContainer.setOnLongClickListener {
 
-            if (currentWidgetView == null) {
+            if (
+                currentWidgetView == null
+            ) {
 
                 showWidgetPicker()
 
@@ -450,14 +504,16 @@ class MainActivity : AppCompatActivity() {
         }
 
         val savedId =
-            widgetRepository.getSavedWidgetId()
+            widgetRepository
+                .getSavedWidgetId()
 
         if (savedId != -1) {
 
             val info =
-                appWidgetManager.getAppWidgetInfo(
-                    savedId
-                )
+                appWidgetManager
+                    .getAppWidgetInfo(
+                        savedId
+                    )
 
             if (info != null) {
 
@@ -468,7 +524,8 @@ class MainActivity : AppCompatActivity() {
 
             } else {
 
-                widgetRepository.clearWidgetId()
+                widgetRepository
+                    .clearWidgetId()
             }
         }
     }
@@ -476,7 +533,8 @@ class MainActivity : AppCompatActivity() {
     private fun showWidgetPicker() {
 
         val providers =
-            appWidgetManager.installedProviders
+            appWidgetManager
+                .installedProviders
 
         if (providers.isEmpty()) {
             return
@@ -492,7 +550,9 @@ class MainActivity : AppCompatActivity() {
                 .toTypedArray()
 
         AlertDialog.Builder(this)
-            .setTitle("Choose a widget")
+            .setTitle(
+                "Choose a widget"
+            )
             .setItems(labels) { _, which ->
 
                 beginBind(
@@ -507,7 +567,8 @@ class MainActivity : AppCompatActivity() {
     ) {
 
         val appWidgetId =
-            appWidgetHost.allocateAppWidgetId()
+            appWidgetHost
+                .allocateAppWidgetId()
 
         val canBind =
             appWidgetManager
@@ -525,20 +586,24 @@ class MainActivity : AppCompatActivity() {
 
         } else {
 
-            pendingProvider = provider
+            pendingProvider =
+                provider
 
             val bindIntent =
                 Intent(
-                    AppWidgetManager.ACTION_APPWIDGET_BIND
+                    AppWidgetManager
+                        .ACTION_APPWIDGET_BIND
                 ).apply {
 
                     putExtra(
-                        AppWidgetManager.EXTRA_APPWIDGET_ID,
+                        AppWidgetManager
+                            .EXTRA_APPWIDGET_ID,
                         appWidgetId
                     )
 
                     putExtra(
-                        AppWidgetManager.EXTRA_APPWIDGET_PROVIDER,
+                        AppWidgetManager
+                            .EXTRA_APPWIDGET_PROVIDER,
                         provider.provider
                     )
                 }
@@ -559,14 +624,16 @@ class MainActivity : AppCompatActivity() {
 
             val configIntent =
                 Intent(
-                    AppWidgetManager.ACTION_APPWIDGET_CONFIGURE
+                    AppWidgetManager
+                        .ACTION_APPWIDGET_CONFIGURE
                 ).apply {
 
                     component =
                         provider.configure
 
                     putExtra(
-                        AppWidgetManager.EXTRA_APPWIDGET_ID,
+                        AppWidgetManager
+                            .EXTRA_APPWIDGET_ID,
                         appWidgetId
                     )
                 }
@@ -613,14 +680,16 @@ class MainActivity : AppCompatActivity() {
 
                 val appWidgetId =
                     data?.getIntExtra(
-                        AppWidgetManager.EXTRA_APPWIDGET_ID,
+                        AppWidgetManager
+                            .EXTRA_APPWIDGET_ID,
                         -1
                     ) ?: -1
 
                 val provider =
                     pendingProvider
 
-                pendingProvider = null
+                pendingProvider =
+                    null
 
                 if (
                     resultCode == RESULT_OK &&
@@ -637,9 +706,10 @@ class MainActivity : AppCompatActivity() {
                     appWidgetId != -1
                 ) {
 
-                    appWidgetHost.deleteAppWidgetId(
-                        appWidgetId
-                    )
+                    appWidgetHost
+                        .deleteAppWidgetId(
+                            appWidgetId
+                        )
                 }
             }
 
@@ -647,7 +717,8 @@ class MainActivity : AppCompatActivity() {
 
                 val appWidgetId =
                     data?.getIntExtra(
-                        AppWidgetManager.EXTRA_APPWIDGET_ID,
+                        AppWidgetManager
+                            .EXTRA_APPWIDGET_ID,
                         -1
                     ) ?: -1
 
@@ -657,9 +728,10 @@ class MainActivity : AppCompatActivity() {
                 ) {
 
                     val info =
-                        appWidgetManager.getAppWidgetInfo(
-                            appWidgetId
-                        )
+                        appWidgetManager
+                            .getAppWidgetInfo(
+                                appWidgetId
+                            )
 
                     if (info != null) {
 
@@ -673,9 +745,10 @@ class MainActivity : AppCompatActivity() {
                     appWidgetId != -1
                 ) {
 
-                    appWidgetHost.deleteAppWidgetId(
-                        appWidgetId
-                    )
+                    appWidgetHost
+                        .deleteAppWidgetId(
+                            appWidgetId
+                        )
                 }
             }
         }
@@ -719,8 +792,12 @@ class MainActivity : AppCompatActivity() {
     private fun confirmRemoveWidget() {
 
         AlertDialog.Builder(this)
-            .setTitle("Remove widget?")
-            .setPositiveButton("Remove") { _, _ ->
+            .setTitle(
+                "Remove widget?"
+            )
+            .setPositiveButton(
+                "Remove"
+            ) { _, _ ->
 
                 removeCurrentWidget()
             }
@@ -734,13 +811,15 @@ class MainActivity : AppCompatActivity() {
     private fun removeCurrentWidget() {
 
         val savedId =
-            widgetRepository.getSavedWidgetId()
+            widgetRepository
+                .getSavedWidgetId()
 
         if (savedId != -1) {
 
-            appWidgetHost.deleteAppWidgetId(
-                savedId
-            )
+            appWidgetHost
+                .deleteAppWidgetId(
+                    savedId
+                )
         }
 
         widgetContainer.removeAllViews()
@@ -771,13 +850,14 @@ class MainActivity : AppCompatActivity() {
             )
         )
 
-        currentWidgetView = null
+        currentWidgetView =
+            null
 
         widgetRepository.clearWidgetId()
     }
 
     // ---------------------------------------------------------
-    // PROFILE OBSERVATION
+    // PROFILE
     // ---------------------------------------------------------
 
     private fun observeProfile() {
@@ -793,12 +873,10 @@ class MainActivity : AppCompatActivity() {
                     profile
                 )
 
-                /*
-                 * Phase 17 intelligence evaluation.
-                 *
-                 * The result is intentionally not coupled
-                 * to a specific presentation component yet.
-                 */
+                updateNowBar(
+                    profile
+                )
+
                 evaluateIntelligence(
                     profile
                 )
