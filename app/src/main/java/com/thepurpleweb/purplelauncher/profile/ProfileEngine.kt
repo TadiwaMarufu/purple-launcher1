@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
  * SharedPreferences remains the persistent source of truth across
  * activity recreation and process restarts.
  */
-class ProfileEngine(context: Context) {
+class ProfileEngine private constructor(context: Context) {
 
     private val prefs: SharedPreferences =
         context.applicationContext.getSharedPreferences(
@@ -126,10 +126,27 @@ class ProfileEngine(context: Context) {
 
         /*
          * One StateFlow for the entire application process.
-         *
-         * This is the important part of the Phase 16 fix.
          */
         private val sharedCurrent =
             MutableStateFlow<Profile>(Profile.Calm)
+
+        /*
+         * One ProfileEngine instance for the entire application process.
+         *
+         * Every launcher component must use getInstance() so they all
+         * operate on the same persistent profile state.
+         */
+        @Volatile
+        private var instance: ProfileEngine? = null
+
+        fun getInstance(context: Context): ProfileEngine {
+            return instance ?: synchronized(this) {
+                instance ?: ProfileEngine(
+                    context.applicationContext
+                ).also {
+                    instance = it
+                }
+            }
+        }
     }
 }
