@@ -27,17 +27,19 @@ class NowBarMediaManager(
             PurpleNotificationListenerService::class.java
         )
 
+    private var currentController:
+        MediaController? = null
+
+    private var started =
+        false
+
     private val listener =
-        MediaSessionManager.OnActiveSessionsChangedListener {
-            controllers ->
+        MediaSessionManager.OnActiveSessionsChangedListener { controllers ->
 
             attachToBestController(
                 controllers
             )
         }
-
-    private var currentController:
-        MediaController? = null
 
     private val callback =
         object : MediaController.Callback() {
@@ -59,6 +61,7 @@ class NowBarMediaManager(
             }
 
             override fun onSessionDestroyed() {
+
                 detachCurrentController()
 
                 refresh()
@@ -67,9 +70,32 @@ class NowBarMediaManager(
 
     fun start() {
 
+        if (started) {
+            refresh()
+            return
+        }
+
         val manager =
             mediaSessionManager
-                ?: return
+
+        if (manager == null) {
+
+            onMediaChanged(null)
+
+            return
+        }
+
+        if (
+            !NowBarMediaAccess
+                .isNotificationListenerEnabled(
+                    appContext
+                )
+        ) {
+
+            onMediaChanged(null)
+
+            return
+        }
 
         try {
 
@@ -78,17 +104,26 @@ class NowBarMediaManager(
                 notificationListenerComponent
             )
 
+            started =
+                true
+
             refresh()
 
         } catch (
             _: SecurityException
         ) {
 
+            started =
+                false
+
             onMediaChanged(null)
 
         } catch (
             _: Exception
         ) {
+
+            started =
+                false
 
             onMediaChanged(null)
         }
@@ -98,19 +133,24 @@ class NowBarMediaManager(
 
         val manager =
             mediaSessionManager
-                ?: return
 
-        try {
+        if (manager != null && started) {
 
-            manager.removeOnActiveSessionsChangedListener(
-                listener
-            )
+            try {
 
-        } catch (
-            _: Exception
-        ) {
-            // Ignore cleanup failures.
+                manager.removeOnActiveSessionsChangedListener(
+                    listener
+                )
+
+            } catch (
+                _: Exception
+            ) {
+                // Ignore cleanup failures.
+            }
         }
+
+        started =
+            false
 
         detachCurrentController()
     }
@@ -119,10 +159,27 @@ class NowBarMediaManager(
 
         val manager =
             mediaSessionManager
-                ?: run {
-                    onMediaChanged(null)
-                    return
-                }
+
+        if (manager == null) {
+
+            onMediaChanged(null)
+
+            return
+        }
+
+        if (
+            !NowBarMediaAccess
+                .isNotificationListenerEnabled(
+                    appContext
+                )
+        ) {
+
+            detachCurrentController()
+
+            onMediaChanged(null)
+
+            return
+        }
 
         try {
 
@@ -139,11 +196,15 @@ class NowBarMediaManager(
             _: SecurityException
         ) {
 
+            detachCurrentController()
+
             onMediaChanged(null)
 
         } catch (
             _: Exception
         ) {
+
+            detachCurrentController()
 
             onMediaChanged(null)
         }
@@ -155,9 +216,10 @@ class NowBarMediaManager(
 
         val best =
             controllers
-                ?.firstOrNull {
+                ?.firstOrNull { controller ->
+
                     val state =
-                        it.playbackState
+                        controller.playbackState
 
                     state != null &&
                         (
@@ -196,11 +258,11 @@ class NowBarMediaManager(
 
     private fun detachCurrentController() {
 
-        currentController?.let {
+        currentController?.let { controller ->
 
             try {
 
-                it.unregisterCallback(
+                controller.unregisterCallback(
                     callback
                 )
 
@@ -248,18 +310,20 @@ class NowBarMediaManager(
             controller.metadata
 
         val title =
-            metadata?.getString(
-                MediaMetadata.METADATA_KEY_TITLE
-            )
+            metadata
+                ?.getString(
+                    MediaMetadata.METADATA_KEY_TITLE
+                )
                 ?.takeIf {
                     it.isNotBlank()
                 }
                 ?: "Now playing"
 
         val artist =
-            metadata?.getString(
-                MediaMetadata.METADATA_KEY_ARTIST
-            )
+            metadata
+                ?.getString(
+                    MediaMetadata.METADATA_KEY_ARTIST
+                )
                 ?.takeIf {
                     it.isNotBlank()
                 }
@@ -269,26 +333,20 @@ class NowBarMediaManager(
                 PlaybackState.STATE_PLAYING
 
         val subtitle =
-            buildString {
+            if (!artist.isNullOrBlank()) {
 
-                if (!artist.isNullOrBlank()) {
-
-                    append(artist)
-
+                if (isPlaying) {
+                    artist
                 } else {
-
-                    append(
-                        if (isPlaying) {
-                            "Playing"
-                        } else {
-                            "Paused"
-                        }
-                    )
+                    "$artist • Paused"
                 }
 
-                if (!isPlaying) {
+            } else {
 
-                    append(" • Paused")
+                if (isPlaying) {
+                    "Playing"
+                } else {
+                    "Paused"
                 }
             }
 

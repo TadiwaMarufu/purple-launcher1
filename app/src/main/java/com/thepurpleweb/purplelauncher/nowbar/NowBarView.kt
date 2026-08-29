@@ -128,6 +128,9 @@ class NowBarView(
             currentProfile
         )
 
+        currentItem =
+            state.primary
+
         buildContent(
             state
         )
@@ -446,6 +449,8 @@ class NowBarView(
         )
     }
 
+    private var currentItem: NowBarItem? = null
+
     private fun updateContent() {
 
         val calendar =
@@ -467,6 +472,51 @@ class NowBarView(
                 hour,
                 minute
             )
+
+        val item =
+            currentItem
+
+        if (
+            item != null &&
+            item.type != NowBarType.IDLE
+        ) {
+
+            titleView.text =
+                when (item.type) {
+
+                    NowBarType.MUSIC ->
+                        "♫  ${item.title}"
+
+                    NowBarType.TIMER ->
+                        "Timer"
+
+                    NowBarType.NOTIFICATION ->
+                        "Notification"
+
+                    NowBarType.DOWNLOAD ->
+                        "Download"
+
+                    NowBarType.CALL ->
+                        "Call"
+
+                    NowBarType.NAVIGATION ->
+                        "Navigation"
+
+                    NowBarType.BATTERY ->
+                        "Battery"
+
+                    NowBarType.CUSTOM ->
+                        item.title
+
+                    else ->
+                        item.title
+                }
+
+            subtitleView.text =
+                item.subtitle ?: ""
+
+            return
+        }
 
         titleView.text =
             currentProfile.displayName
@@ -730,14 +780,18 @@ class NowBarView(
             buildContent(
                 NowBarState(
                     primary =
-                        NowBarItem(
-                            type =
-                                NowBarType.IDLE,
-                            title =
-                                currentProfile.displayName,
-                            subtitle =
-                                "Now Bar active"
-                        ),
+                        currentItem
+                            ?: NowBarItem(
+                                type =
+                                    NowBarType.IDLE,
+
+                                title =
+                                    currentProfile.displayName,
+
+                                subtitle =
+                                    "Now Bar active"
+                            ),
+
                     expanded =
                         true
                 )
