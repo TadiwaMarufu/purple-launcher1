@@ -63,6 +63,12 @@ class SettingsRepository(
                 preferences.getBoolean(
                     KEY_DRAWER_SEARCH,
                     true
+                ),
+
+            performanceMode =
+                preferences.getBoolean(
+                    KEY_PERFORMANCE_MODE,
+                    true
                 )
         )
     }
@@ -123,6 +129,14 @@ class SettingsRepository(
         )
     }
 
+    fun setPerformanceMode(enabled: Boolean) {
+        update(
+            _settings.value.copy(
+                performanceMode = enabled
+            )
+        )
+    }
+
     private fun update(
         settings: LauncherSettings
     ) {
@@ -156,6 +170,10 @@ class SettingsRepository(
                 KEY_DRAWER_SEARCH,
                 settings.appDrawerSearchEnabled
             )
+            .putBoolean(
+                KEY_PERFORMANCE_MODE,
+                settings.performanceMode
+            )
             .apply()
 
         _settings.value = settings
@@ -183,5 +201,8 @@ class SettingsRepository(
 
         private const val KEY_DRAWER_SEARCH =
             "drawer_search_enabled"
+
+        private const val KEY_PERFORMANCE_MODE =
+            "performance_mode"
     }
 }

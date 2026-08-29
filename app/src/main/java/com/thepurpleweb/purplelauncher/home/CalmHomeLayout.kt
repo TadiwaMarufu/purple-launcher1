@@ -26,6 +26,7 @@ class CalmHomeLayout : HomeLayout {
             horizontalSpacing = ProfileVisualsProvider.dp(this, 4)
             gravity = Gravity.CENTER
             clipToPadding = false
+            setWillNotDraw(false)
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT

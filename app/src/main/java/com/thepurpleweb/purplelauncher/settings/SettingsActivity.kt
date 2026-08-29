@@ -139,6 +139,15 @@ class SettingsActivity : AppCompatActivity() {
             repository.setReducedMotion(it)
         }
 
+        addSwitch(
+            root,
+            "Performance mode",
+            "Prioritize responsiveness and memory usage on slower devices.",
+            repository.settings.value.performanceMode
+        ) {
+            repository.setPerformanceMode(it)
+        }
+
         addSection(
             root,
             "INTELLIGENCE"

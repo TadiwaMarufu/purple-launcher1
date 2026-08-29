@@ -7,5 +7,6 @@ data class LauncherSettings(
     val animationsEnabled: Boolean = true,
     val reducedMotion: Boolean = false,
     val smartDockEnabled: Boolean = true,
-    val appDrawerSearchEnabled: Boolean = true
+    val appDrawerSearchEnabled: Boolean = true,
+    val performanceMode: Boolean = true
 )

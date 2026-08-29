@@ -53,6 +53,8 @@ class FocusHomeLayout : HomeLayout {
         }
 
         val listView = ListView(context).apply {
+            isVerticalScrollBarEnabled = false
+            cacheColorHint = Color.TRANSPARENT
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0,
