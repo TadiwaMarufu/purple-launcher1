@@ -20,7 +20,7 @@ class ProfilesActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        profileEngine = ProfileEngine.getInstance(applicationContext)
+        profileEngine = ProfileEngine(applicationContext)
 
         buildUi()
     }
