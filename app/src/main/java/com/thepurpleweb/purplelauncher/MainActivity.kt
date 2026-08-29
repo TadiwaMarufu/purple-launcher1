@@ -377,7 +377,7 @@ class MainActivity : AppCompatActivity() {
         return try {
 
             DevicePerformance
-                .visualQuality(this)
+                .classify(this)
 
         } catch (_: Exception) {
 
