@@ -60,6 +60,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var nowBarController: NowBarController
     private lateinit var nowBarView: NowBarView
     private lateinit var nowBarMediaManager: NowBarMediaManager
+    private lateinit var nowBarCoordinator: NowBarCoordinator
+    private lateinit var nowBarCallManager: NowBarCallManager
 
     private var currentWidgetView: AppWidgetHostView? = null
     private var pendingProvider: AppWidgetProviderInfo? = null
@@ -203,6 +205,11 @@ class MainActivity : AppCompatActivity() {
 
             nowBarMediaManager.start()
         }
+
+        if (::nowBarCallManager.isInitialized) {
+
+            nowBarCallManager.start()
+        }
     }
 
     override fun onStop() {
@@ -210,6 +217,11 @@ class MainActivity : AppCompatActivity() {
         if (::nowBarMediaManager.isInitialized) {
 
             nowBarMediaManager.stop()
+        }
+
+        if (::nowBarCallManager.isInitialized) {
+
+            nowBarCallManager.stop()
         }
 
         appWidgetHost.stopListening()
@@ -353,6 +365,14 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
+        nowBarCallManager =
+            NowBarCallManager(
+                this
+            ) { item ->
+
+                handleCallEvent(item)
+            }
+
         nowBarView.setActions(
 
             onSwitchProfile = {
@@ -439,6 +459,24 @@ class MainActivity : AppCompatActivity() {
             quality
         )
     }
+
+    private fun handleCallEvent(item: NowBarItem?) {
+
+        if (item != null) {
+
+            nowBarController.setPrimary(item)
+
+            nowBarView.setState(
+                nowBarController.state.value,
+                determineVisualQuality()
+            )
+
+        } else {
+
+            updateNowBar(profileEngine.current.value)
+        }
+    }
+
 
     private fun determineVisualQuality():
         VisualQuality {

@@ -331,11 +331,16 @@ class NowBarView(
         val row =
             TextView(context).apply {
 
+                val progressText =
+                    item.progress?.let {
+                        "  •  $it%"
+                    } ?: ""
+
                 text =
                     if (item.subtitle.isNullOrBlank()) {
-                        item.title
+                        "${item.title}$progressText"
                     } else {
-                        "${item.title}  •  ${item.subtitle}"
+                        "${item.title}  •  ${item.subtitle}$progressText"
                     }
 
                 textSize =

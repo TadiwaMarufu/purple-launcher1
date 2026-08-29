@@ -14,14 +14,20 @@ class NowBarController {
     val state: StateFlow<NowBarState> =
         _state.asStateFlow()
 
-    fun setPrimary(item: NowBarItem?) {
+    fun setPrimary(
+        item: NowBarItem?
+    ) {
+
         _state.value =
             _state.value.copy(
                 primary = item
             )
     }
 
-    fun setSecondary(item: NowBarItem?) {
+    fun setSecondary(
+        item: NowBarItem?
+    ) {
+
         _state.value =
             _state.value.copy(
                 secondary = item
@@ -32,6 +38,7 @@ class NowBarController {
         primary: NowBarItem?,
         secondary: NowBarItem? = null
     ) {
+
         _state.value =
             _state.value.copy(
                 primary = primary,
@@ -40,13 +47,18 @@ class NowBarController {
     }
 
     fun toggleExpanded() {
+
         _state.value =
             _state.value.copy(
-                expanded = !_state.value.expanded
+                expanded =
+                    !_state.value.expanded
             )
     }
 
-    fun setExpanded(expanded: Boolean) {
+    fun setExpanded(
+        expanded: Boolean
+    ) {
+
         _state.value =
             _state.value.copy(
                 expanded = expanded
@@ -54,6 +66,7 @@ class NowBarController {
     }
 
     fun clear() {
+
         _state.value =
             NowBarState()
     }
