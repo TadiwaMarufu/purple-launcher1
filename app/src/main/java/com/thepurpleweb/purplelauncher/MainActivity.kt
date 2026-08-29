@@ -140,9 +140,8 @@ class MainActivity : AppCompatActivity() {
         when (intent.action) {
             SearchActivity.ACTION_START_TIMER -> {
                 val duration = intent.getLongExtra(SearchActivity.EXTRA_TIMER_DURATION, 0L)
-                val label = intent.getStringExtra(SearchActivity.EXTRA_TIMER_LABEL) ?: "Timer"
                 if (duration > 0 && ::nowBarTimerManager.isInitialized) {
-                    nowBarTimerManager.start(duration, label)
+                    nowBarTimerManager.start(duration)
                 }
             }
             SearchActivity.ACTION_SET_CUSTOM_NOWBAR -> {
@@ -153,7 +152,8 @@ class MainActivity : AppCompatActivity() {
                             type = NowBarType.CUSTOM,
                             title = "Note",
                             subtitle = message
-                        )
+                        ),
+                        priority = 80
                     )
                 }
             }
@@ -212,10 +212,11 @@ class MainActivity : AppCompatActivity() {
         nowBarController = NowBarController()
         nowBarView = NowBarView(this)
 
-        nowBarCoordinator = NowBarCoordinator(this) { item ->
-            runOnUiThread {
-                nowBarController.setPrimary(item ?: buildIdleItem(profileEngine.current.value))
-                nowBarView.setState(nowBarController.state.value, determineVisualQuality())
+        nowBarCoordinator = NowBarCoordinator(this, nowBarController)
+
+        lifecycleScope.launch {
+            nowBarController.state.collect { state ->
+                nowBarView.setState(state, determineVisualQuality())
             }
         }
 
@@ -257,7 +258,6 @@ class MainActivity : AppCompatActivity() {
 
         val activeItem = nowBarCoordinator.current()
         nowBarController.setPrimary(activeItem ?: buildIdleItem(profile))
-        nowBarView.setState(nowBarController.state.value, quality)
     }
 
     private fun buildIdleItem(profile: Profile): NowBarItem {

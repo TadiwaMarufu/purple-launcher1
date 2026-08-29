@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import com.thepurpleweb.purplelauncher.notifications.NotificationItem
 import com.thepurpleweb.purplelauncher.notifications.NotificationStore
 
 class NowBarNotificationBridge(
@@ -51,7 +50,7 @@ class NowBarNotificationBridge(
     }
 
     private fun processNotifications() {
-        val active = NotificationStore.getNotifications()
+        val active = NotificationStore.all()
 
         val latestNav = active.firstOrNull { it.packageName in navPackages }
         if (latestNav != null) {
@@ -59,7 +58,7 @@ class NowBarNotificationBridge(
                 NowBarItem(
                     type = NowBarType.NAVIGATION,
                     title = latestNav.title.ifEmpty { "Navigation" },
-                    subtitle = latestNav.content
+                    subtitle = latestNav.text
                 )
             )
         } else {
@@ -74,7 +73,7 @@ class NowBarNotificationBridge(
                 NowBarItem(
                     type = NowBarType.DOWNLOAD,
                     title = latestDownload.title.ifEmpty { "Downloading" },
-                    subtitle = latestDownload.content
+                    subtitle = latestDownload.text
                 )
             )
         } else {
@@ -88,8 +87,8 @@ class NowBarNotificationBridge(
             coordinator.setNotification(
                 NowBarItem(
                     type = NowBarType.NOTIFICATION,
-                    title = latestGeneral.title.ifEmpty { latestGeneral.packageName },
-                    subtitle = latestGeneral.content
+                    title = latestGeneral.title.ifEmpty { latestGeneral.appName },
+                    subtitle = latestGeneral.text
                 )
             )
         } else {
