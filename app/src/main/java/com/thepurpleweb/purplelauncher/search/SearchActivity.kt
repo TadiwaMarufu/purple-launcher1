@@ -6,6 +6,7 @@ import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.thepurpleweb.purplelauncher.R
 import com.thepurpleweb.purplelauncher.apps.AppInfo
 import com.thepurpleweb.purplelauncher.apps.AppRepository
@@ -13,6 +14,7 @@ import com.thepurpleweb.purplelauncher.drawer.AppDrawerActivity
 import com.thepurpleweb.purplelauncher.profile.Profile
 import com.thepurpleweb.purplelauncher.profile.ProfileEngine
 import com.thepurpleweb.purplelauncher.settings.SettingsActivity
+import kotlinx.coroutines.launch
 
 class SearchActivity : AppCompatActivity() {
 
@@ -64,14 +66,10 @@ class SearchActivity : AppCompatActivity() {
                 R.id.search_results
             )
 
-        allApps =
-            appRepository
-                .getAllLaunchableApps()
-
         adapter =
             SearchResultAdapter(
                 this,
-                allApps
+                emptyList()
             ) { app ->
                 appRepository.launchApp(
                     app.packageName
@@ -89,19 +87,26 @@ class SearchActivity : AppCompatActivity() {
             android.view.WindowManager.LayoutParams
                 .SOFT_INPUT_STATE_ALWAYS_VISIBLE
         )
+
+        loadAppsAsync()
     }
 
     override fun onResume() {
         super.onResume()
 
-        allApps =
-            appRepository
-                .getAllLaunchableApps()
+        loadAppsAsync()
+    }
 
-        if (::adapter.isInitialized) {
-            adapter.updateResults(
-                allApps
-            )
+    // Off-main-thread load, same pattern as MainActivity/AppDrawerActivity.
+    // On a cache hit (the common case, since MainActivity already
+    // warmed the cache) this resolves almost instantly.
+    private fun loadAppsAsync() {
+        lifecycleScope.launch {
+            allApps = appRepository.getAllLaunchableAppsAsync()
+
+            if (::adapter.isInitialized) {
+                adapter.updateResults(allApps)
+            }
         }
     }
 

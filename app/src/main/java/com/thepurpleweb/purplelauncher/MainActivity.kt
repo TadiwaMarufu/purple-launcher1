@@ -106,11 +106,18 @@ class MainActivity : AppCompatActivity() {
         dockGrid = findViewById(R.id.dock_grid)
         widgetContainer = findViewById(R.id.widget_container)
 
-        loadCuratedApps()
-        setupHome()
+        // Dock, gestures, and widget hosting no longer wait on the app
+        // list — they set up immediately since none of them depend on
+        // curatedApps being loaded yet.
         setupDock()
         setupGestures()
         setupWidgetArea()
+
+        profileLabel.setOnClickListener {
+            profileEngine.cycleNext()
+        }
+
+        loadCuratedAppsAsync()
         observeProfile()
     }
 
@@ -139,20 +146,20 @@ class MainActivity : AppCompatActivity() {
         return super.dispatchTouchEvent(ev)
     }
 
-    private fun loadCuratedApps() {
-        val allApps = appRepository.getAllLaunchableApps()
+    // Loads the app list off the main thread (see AppRepository
+    // .getAllLaunchableAppsAsync) then renders home once ready. On a
+    // cache hit this resolves almost immediately; on a cold start it
+    // no longer blocks onCreate the way the synchronous call used to.
+    private fun loadCuratedAppsAsync() {
+        lifecycleScope.launch {
+            val allApps = appRepository.getAllLaunchableAppsAsync()
 
-        curatedApps = allApps
-            .filter { it.packageName in curatedPackageHints }
-            .ifEmpty { allApps.take(8) }
-    }
+            curatedApps = allApps
+                .filter { it.packageName in curatedPackageHints }
+                .ifEmpty { allApps.take(8) }
 
-    private fun setupHome() {
-        profileLabel.setOnClickListener {
-            profileEngine.cycleNext()
+            renderHomeLayout(profileEngine.current.value)
         }
-
-        renderHomeLayout(profileEngine.current.value)
     }
 
     private fun renderHomeLayout(profile: Profile) {

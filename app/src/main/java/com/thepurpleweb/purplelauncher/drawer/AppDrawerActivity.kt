@@ -5,15 +5,16 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.widget.EditText
 import android.widget.GridView
-import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.thepurpleweb.purplelauncher.R
 import com.thepurpleweb.purplelauncher.apps.AppCategory
 import com.thepurpleweb.purplelauncher.apps.AppDrawerAdapter
 import com.thepurpleweb.purplelauncher.apps.AppInfo
 import com.thepurpleweb.purplelauncher.apps.AppRepository
+import kotlinx.coroutines.launch
 
 class AppDrawerActivity : AppCompatActivity() {
 
@@ -47,19 +48,25 @@ class AppDrawerActivity : AppCompatActivity() {
         appGrid.adapter = adapter
 
         buildCategories()
-        loadApps()
+        loadAppsAsync()
         setupSearch()
     }
 
     override fun onResume() {
         super.onResume()
 
-        loadApps(forceRefresh = true)
+        loadAppsAsync(forceRefresh = true)
     }
 
-    private fun loadApps(forceRefresh: Boolean = false) {
-        allApps = repository.getAllLaunchableApps(forceRefresh)
-        applyFilter()
+    // Off-main-thread load. Grid starts empty and populates once the
+    // query returns, instead of blocking onCreate/onResume on the
+    // PackageManager call — matters most on the forceRefresh path,
+    // which skips the cache every time the drawer is reopened.
+    private fun loadAppsAsync(forceRefresh: Boolean = false) {
+        lifecycleScope.launch {
+            allApps = repository.getAllLaunchableAppsAsync(forceRefresh)
+            applyFilter()
+        }
     }
 
     private fun buildCategories() {

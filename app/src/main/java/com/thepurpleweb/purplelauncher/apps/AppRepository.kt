@@ -2,6 +2,8 @@ package com.thepurpleweb.purplelauncher.apps
 
 import android.content.Context
 import android.content.Intent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class AppRepository(
     private val context: Context
@@ -62,6 +64,20 @@ class AppRepository(
         return apps
     }
 
+    /**
+     * Same query as getAllLaunchableApps, but performed off the main
+     * thread. PackageManager queries and icon loading for a large app
+     * list are real main-thread cost on low-RAM devices (spec section
+     * 17) — this is the entry point every Activity should call instead
+     * of the synchronous version, except where a cache hit is already
+     * guaranteed cheap.
+     */
+    suspend fun getAllLaunchableAppsAsync(
+        forceRefresh: Boolean = false
+    ): List<AppInfo> = withContext(Dispatchers.Default) {
+        getAllLaunchableApps(forceRefresh)
+    }
+
     fun getAppsByCategory(
         category: AppCategory
     ): List<AppInfo> {
@@ -102,6 +118,16 @@ class AppRepository(
                     !isTool(app)
                 }
         }
+    }
+
+    /**
+     * Off-main-thread version of getAppsByCategory, for the same
+     * reason as getAllLaunchableAppsAsync.
+     */
+    suspend fun getAppsByCategoryAsync(
+        category: AppCategory
+    ): List<AppInfo> = withContext(Dispatchers.Default) {
+        getAppsByCategory(category)
     }
 
     private fun isCommunication(
