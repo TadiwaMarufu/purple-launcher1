@@ -198,13 +198,23 @@ class MainActivity : AppCompatActivity() {
         super.onStart()
 
         appWidgetHost.startListening()
+
+        if (::nowBarMediaManager.isInitialized) {
+
+            nowBarMediaManager.start()
+        }
     }
 
     override fun onStop() {
 
-        super.onStop()
+        if (::nowBarMediaManager.isInitialized) {
+
+            nowBarMediaManager.stop()
+        }
 
         appWidgetHost.stopListening()
+
+        super.onStop()
     }
 
     /*
@@ -913,26 +923,6 @@ class MainActivity : AppCompatActivity() {
             null
 
         widgetRepository.clearWidgetId()
-    }
-
-    override fun onStart() {
-
-        super.onStart()
-
-        if (::nowBarMediaManager.isInitialized) {
-
-            nowBarMediaManager.start()
-        }
-    }
-
-    override fun onStop() {
-
-        if (::nowBarMediaManager.isInitialized) {
-
-            nowBarMediaManager.stop()
-        }
-
-        super.onStop()
     }
 
     // ---------------------------------------------------------
