@@ -143,6 +143,11 @@ class NowBarView(
 
         removeAllViews()
 
+        // Detach reusable views from any previous parent.
+        (titleView.parent as? ViewGroup)?.removeView(titleView)
+        (subtitleView.parent as? ViewGroup)?.removeView(subtitleView)
+        (timeView.parent as? ViewGroup)?.removeView(timeView)
+
         primaryColumn =
             LinearLayout(context).apply {
 
@@ -151,6 +156,12 @@ class NowBarView(
 
                 gravity =
                     Gravity.CENTER_VERTICAL
+
+                layoutParams =
+                    LayoutParams(
+                        LayoutParams.MATCH_PARENT,
+                        LayoutParams.WRAP_CONTENT
+                    )
             }
 
         val textColumn =
@@ -172,26 +183,21 @@ class NowBarView(
 
         titleView.apply {
 
-            textSize =
-                14f
+            textSize = 14f
 
-            maxLines =
-                1
+            maxLines = 1
         }
 
         subtitleView.apply {
 
-            textSize =
-                11f
+            textSize = 11f
 
-            maxLines =
-                1
+            maxLines = 1
         }
 
         timeView.apply {
 
-            textSize =
-                15f
+            textSize = 15f
 
             gravity =
                 Gravity.CENTER
@@ -218,11 +224,7 @@ class NowBarView(
         )
 
         addView(
-            primaryColumn,
-            LayoutParams(
-                LayoutParams.MATCH_PARENT,
-                LayoutParams.WRAP_CONTENT
-            )
+            primaryColumn
         )
     }
 
