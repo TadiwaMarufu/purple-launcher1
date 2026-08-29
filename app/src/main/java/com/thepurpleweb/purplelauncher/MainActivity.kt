@@ -23,6 +23,8 @@ import com.thepurpleweb.purplelauncher.home.HomeLayoutFactory
 import com.thepurpleweb.purplelauncher.intelligence.IntelligenceManager
 import com.thepurpleweb.purplelauncher.notifications.NotificationCenterActivity
 import com.thepurpleweb.purplelauncher.nowbar.NowBarController
+import com.thepurpleweb.purplelauncher.nowbar.NowBarCallManager
+import com.thepurpleweb.purplelauncher.nowbar.NowBarCoordinator
 import com.thepurpleweb.purplelauncher.nowbar.NowBarItem
 import com.thepurpleweb.purplelauncher.nowbar.NowBarType
 import com.thepurpleweb.purplelauncher.nowbar.NowBarView
