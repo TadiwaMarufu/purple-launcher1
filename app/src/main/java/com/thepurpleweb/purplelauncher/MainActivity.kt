@@ -14,8 +14,8 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.thepurpleweb.purplelauncher.apps.AppInfo
 import com.thepurpleweb.purplelauncher.apps.AppRepository
-import com.thepurpleweb.purplelauncher.apps.HomeAppAdapter
 import com.thepurpleweb.purplelauncher.dock.DockAdapter
 import com.thepurpleweb.purplelauncher.dock.DockEditorActivity
 import com.thepurpleweb.purplelauncher.dock.DockRepository
@@ -23,6 +23,8 @@ import com.thepurpleweb.purplelauncher.drawer.AppDrawerActivity
 import com.thepurpleweb.purplelauncher.gestures.GestureAction
 import com.thepurpleweb.purplelauncher.gestures.GestureRepository
 import com.thepurpleweb.purplelauncher.gestures.LauncherGestureDetector
+import com.thepurpleweb.purplelauncher.home.HomeLayoutFactory
+import com.thepurpleweb.purplelauncher.profile.Profile
 import com.thepurpleweb.purplelauncher.profile.ProfileEngine
 import com.thepurpleweb.purplelauncher.search.SearchActivity
 import com.thepurpleweb.purplelauncher.settings.SettingsActivity
@@ -48,9 +50,11 @@ class MainActivity : AppCompatActivity() {
     private var pendingProvider: AppWidgetProviderInfo? = null
 
     private lateinit var profileLabel: TextView
-    private lateinit var appGrid: GridView
+    private lateinit var homeContentContainer: FrameLayout
     private lateinit var dockGrid: GridView
     private lateinit var dockAdapter: DockAdapter
+
+    private var curatedApps: List<AppInfo> = emptyList()
 
     private val curatedPackageHints = listOf(
         "com.android.dialer",
@@ -98,10 +102,11 @@ class MainActivity : AppCompatActivity() {
         appWidgetHost = AppWidgetHost(this, WidgetRepository.HOST_ID)
 
         profileLabel = findViewById(R.id.profile_label)
-        appGrid = findViewById(R.id.app_grid)
+        homeContentContainer = findViewById(R.id.home_content_container)
         dockGrid = findViewById(R.id.dock_grid)
         widgetContainer = findViewById(R.id.widget_container)
 
+        loadCuratedApps()
         setupHome()
         setupDock()
         setupGestures()
@@ -134,19 +139,29 @@ class MainActivity : AppCompatActivity() {
         return super.dispatchTouchEvent(ev)
     }
 
-    private fun setupHome() {
+    private fun loadCuratedApps() {
+        val allApps = appRepository.getAllLaunchableApps()
 
+        curatedApps = allApps
+            .filter { it.packageName in curatedPackageHints }
+            .ifEmpty { allApps.take(8) }
+    }
+
+    private fun setupHome() {
         profileLabel.setOnClickListener {
             profileEngine.cycleNext()
         }
 
-        val allApps = appRepository.getAllLaunchableApps()
+        renderHomeLayout(profileEngine.current.value)
+    }
 
-        val curatedApps = allApps
-            .filter { it.packageName in curatedPackageHints }
-            .ifEmpty { allApps.take(8) }
+    private fun renderHomeLayout(profile: Profile) {
+        val layout = HomeLayoutFactory.forProfile(profile)
 
-        appGrid.adapter = HomeAppAdapter(this, curatedApps) { app ->
+        layout.build(
+            homeContentContainer,
+            curatedApps
+        ) { app ->
             appRepository.launchApp(app.packageName)
         }
     }
@@ -182,7 +197,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupGestures() {
-
         gestureDetector = LauncherGestureDetector(gestureRepository) { action ->
             handleGestureAction(action)
         }
@@ -386,6 +400,7 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             profileEngine.current.collect { profile ->
                 profileLabel.text = profile.displayName
+                renderHomeLayout(profile)
             }
         }
     }

@@ -36,15 +36,11 @@
 
     </FrameLayout>
 
-    <GridView
-        android:id="@+id/app_grid"
+    <FrameLayout
+        android:id="@+id/home_content_container"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:numColumns="4"
-        android:verticalSpacing="16dp"
-        android:gravity="center"
-        android:clipToPadding="false" />
+        android:layout_weight="1" />
 
     <LinearLayout
         android:id="@+id/dock_container"
