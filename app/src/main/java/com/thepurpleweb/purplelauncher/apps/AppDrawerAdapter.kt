@@ -8,12 +8,16 @@ import android.widget.BaseAdapter
 import android.widget.ImageView
 import android.widget.TextView
 import com.thepurpleweb.purplelauncher.R
+import com.thepurpleweb.purplelauncher.icons.IconTreatment
+import com.thepurpleweb.purplelauncher.profile.ProfileEngine
 
 class AppDrawerAdapter(
     private val context: Context,
     private var apps: List<AppInfo>,
     private val onAppClick: (AppInfo) -> Unit
 ) : BaseAdapter() {
+
+    private val profileEngine = ProfileEngine(context.applicationContext)
 
     fun updateApps(newApps: List<AppInfo>) {
         apps = newApps
@@ -36,11 +40,16 @@ class AppDrawerAdapter(
 
         val app = apps[position]
 
-        view.findViewById<ImageView>(R.id.drawer_app_icon)
-            .setImageDrawable(app.icon)
+        val icon = view.findViewById<ImageView>(R.id.drawer_app_icon)
+        val label = view.findViewById<TextView>(R.id.drawer_app_label)
 
-        view.findViewById<TextView>(R.id.drawer_app_label)
-            .text = app.label
+        IconTreatment.apply(
+            icon,
+            app.icon,
+            profileEngine.current.value
+        )
+
+        label.text = app.label
 
         view.setOnClickListener {
             onAppClick(app)

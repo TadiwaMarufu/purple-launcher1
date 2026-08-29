@@ -9,6 +9,8 @@ import android.widget.ImageView
 import android.widget.TextView
 import com.thepurpleweb.purplelauncher.R
 import com.thepurpleweb.purplelauncher.apps.AppInfo
+import com.thepurpleweb.purplelauncher.icons.IconTreatment
+import com.thepurpleweb.purplelauncher.profile.ProfileEngine
 
 class DockAdapter(
     private val context: Context,
@@ -16,6 +18,8 @@ class DockAdapter(
     private val onAppClick: (AppInfo) -> Unit,
     private val onAppLongClick: (AppInfo) -> Boolean
 ) : BaseAdapter() {
+
+    private val profileEngine = ProfileEngine(context.applicationContext)
 
     fun updateApps(newApps: List<AppInfo>) {
         apps = newApps
@@ -48,13 +52,21 @@ class DockAdapter(
 
         val app = apps[position]
 
-        view.findViewById<ImageView>(
+        val icon = view.findViewById<ImageView>(
             R.id.dock_app_icon
-        ).setImageDrawable(app.icon)
+        )
 
-        view.findViewById<TextView>(
+        val label = view.findViewById<TextView>(
             R.id.dock_app_label
-        ).text = app.label
+        )
+
+        IconTreatment.apply(
+            icon,
+            app.icon,
+            profileEngine.current.value
+        )
+
+        label.text = app.label
 
         view.setOnClickListener {
             onAppClick(app)
