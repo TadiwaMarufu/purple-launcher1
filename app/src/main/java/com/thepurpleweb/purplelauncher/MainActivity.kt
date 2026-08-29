@@ -199,9 +199,6 @@ class MainActivity : AppCompatActivity() {
 
         appWidgetHost.startListening()
 
-        if (::nowBarCoordinator.isInitialized) {
-        }
-
         if (::nowBarMediaManager.isInitialized) {
 
             nowBarMediaManager.start()
@@ -213,9 +210,6 @@ class MainActivity : AppCompatActivity() {
         if (::nowBarMediaManager.isInitialized) {
 
             nowBarMediaManager.stop()
-        }
-
-        if (::nowBarCoordinator.isInitialized) {
         }
 
         appWidgetHost.stopListening()
@@ -302,20 +296,6 @@ class MainActivity : AppCompatActivity() {
                 this
             )
 
-                this,
-                nowBarController
-            )
-
-
-                runOnUiThread {
-
-                        timerItem
-                    )
-
-                    renderNowBar()
-                }
-            }
-
         nowBarMediaManager =
             NowBarMediaManager(
                 this
@@ -323,18 +303,53 @@ class MainActivity : AppCompatActivity() {
 
                 runOnUiThread {
 
+                    val quality =
+                        determineVisualQuality()
+
                     if (mediaItem != null) {
 
+                        nowBarController.setPrimary(
                             mediaItem
                         )
 
                     } else {
 
-                            null
+                        nowBarController.setPrimary(
+                            NowBarItem(
+                                type =
+                                    NowBarType.IDLE,
+
+                                title =
+                                    profileEngine.current.value.displayName,
+
+                                subtitle =
+                                    when (
+                                        profileEngine.current.value
+                                    ) {
+
+                                        Profile.Fluid ->
+                                            "Living environment"
+
+                                        Profile.Premium ->
+                                            "Refined environment"
+
+                                        Profile.Calm ->
+                                            "Quiet environment"
+
+                                        Profile.Focus ->
+                                            "Productive environment"
+
+                                        Profile.Expressive ->
+                                            "Creative environment"
+                                    }
+                            )
                         )
                     }
 
-                    renderNowBar()
+                    nowBarView.setState(
+                        nowBarController.state.value,
+                        quality
+                    )
                 }
             }
 
@@ -380,20 +395,6 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun renderNowBar() {
-
-        if (!::nowBarView.isInitialized ||
-            !::nowBarController.isInitialized
-        ) {
-            return
-        }
-
-        nowBarView.setState(
-            nowBarController.state.value,
-            determineVisualQuality()
-        )
-    }
-
     private fun updateNowBar(
         profile: Profile
     ) {
@@ -406,50 +407,32 @@ class MainActivity : AppCompatActivity() {
             quality
         )
 
-        /*
-         * Do not overwrite an active contextual item such as
-         * MUSIC when the profile changes.
-         *
-         * The Now Bar gives contextual activity priority over
-         * its normal profile/idle state.
-         */
-        val currentItem =
-            nowBarController.state.value.primary
+        nowBarController.setPrimary(
+            NowBarItem(
+                type =
+                    NowBarType.IDLE,
+                title =
+                    profile.displayName,
+                subtitle =
+                    when (profile) {
 
-        if (
-            currentItem == null ||
-            currentItem.type == NowBarType.IDLE
-        ) {
+                        Profile.Fluid ->
+                            "Living environment"
 
-            nowBarController.setPrimary(
-                NowBarItem(
-                    type =
-                        NowBarType.IDLE,
+                        Profile.Premium ->
+                            "Refined environment"
 
-                    title =
-                        profile.displayName,
+                        Profile.Calm ->
+                            "Quiet environment"
 
-                    subtitle =
-                        when (profile) {
+                        Profile.Focus ->
+                            "Productive environment"
 
-                            Profile.Fluid ->
-                                "Living environment"
-
-                            Profile.Premium ->
-                                "Refined environment"
-
-                            Profile.Calm ->
-                                "Quiet environment"
-
-                            Profile.Focus ->
-                                "Productive environment"
-
-                            Profile.Expressive ->
-                                "Creative environment"
-                        }
-                )
+                        Profile.Expressive ->
+                            "Creative environment"
+                    }
             )
-        }
+        )
 
         nowBarView.setState(
             nowBarController.state.value,
