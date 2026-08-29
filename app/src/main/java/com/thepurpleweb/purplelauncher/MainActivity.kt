@@ -27,8 +27,6 @@ import com.thepurpleweb.purplelauncher.nowbar.NowBarItem
 import com.thepurpleweb.purplelauncher.nowbar.NowBarType
 import com.thepurpleweb.purplelauncher.nowbar.NowBarView
 import com.thepurpleweb.purplelauncher.nowbar.NowBarMediaManager
-import com.thepurpleweb.purplelauncher.nowbar.NowBarCoordinator
-import com.thepurpleweb.purplelauncher.nowbar.NowBarTimerManager
 import com.thepurpleweb.purplelauncher.performance.DevicePerformance
 import com.thepurpleweb.purplelauncher.performance.VisualQuality
 import com.thepurpleweb.purplelauncher.profile.Profile
@@ -62,8 +60,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var nowBarController: NowBarController
     private lateinit var nowBarView: NowBarView
     private lateinit var nowBarMediaManager: NowBarMediaManager
-    private lateinit var nowBarCoordinator: NowBarCoordinator
-    private lateinit var nowBarTimerManager: NowBarTimerManager
 
     private var currentWidgetView: AppWidgetHostView? = null
     private var pendingProvider: AppWidgetProviderInfo? = null
@@ -308,13 +304,11 @@ class MainActivity : AppCompatActivity() {
                 this
             )
 
-        nowBarCoordinator =
             NowBarCoordinator(
                 this,
                 nowBarController
             )
 
-        nowBarTimerManager =
             NowBarTimerManager { timerItem ->
 
                 runOnUiThread {
