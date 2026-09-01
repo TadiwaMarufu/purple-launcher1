@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import androidx.core.content.ContextCompat
 import com.thepurpleweb.purplelauncher.notifications.NotificationStore
 
 class NowBarNotificationBridge(
@@ -32,11 +33,27 @@ class NowBarNotificationBridge(
     }
 
     fun start() {
-        if (!isListening) {
-            val filter = IntentFilter(NotificationStore.ACTION_NOTIFICATIONS_CHANGED)
-            context.registerReceiver(receiver, filter)
+        if (isListening) {
+            return
+        }
+
+        try {
+            // This is an internal, same-app broadcast (NotificationStore
+            // sets setPackage(context.packageName)), so RECEIVER_NOT_EXPORTED
+            // is correct here. Registering without an export flag throws a
+            // SecurityException on API 33+ when targetSdk >= 33 — this
+            // bridge previously had no protection against that.
+            ContextCompat.registerReceiver(
+                context,
+                receiver,
+                IntentFilter(NotificationStore.ACTION_NOTIFICATIONS_CHANGED),
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
             isListening = true
             processNotifications()
+        } catch (_: Exception) {
+            // Gracefully degrade: NOTIFICATION/DOWNLOAD/NAVIGATION Now Bar
+            // types simply won't populate, rest of the launcher unaffected.
         }
     }
 
@@ -44,7 +61,8 @@ class NowBarNotificationBridge(
         if (isListening) {
             try {
                 context.unregisterReceiver(receiver)
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
             isListening = false
         }
     }
