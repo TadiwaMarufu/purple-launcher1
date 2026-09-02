@@ -1,19 +1,21 @@
 package com.thepurpleweb.purplelauncher.home
 
-import android.graphics.Color
 import android.view.Gravity
 import android.view.ViewGroup
+import android.widget.GridView
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.thepurpleweb.purplelauncher.apps.AppInfo
 import com.thepurpleweb.purplelauncher.apps.HomeAppAdapter
-import android.widget.GridView
+import com.thepurpleweb.purplelauncher.performance.VisualQuality
 
 class FluidHomeLayout : HomeLayout {
 
     override fun build(
         container: ViewGroup,
         apps: List<AppInfo>,
+        quality: VisualQuality,
+        reducedMotion: Boolean,
         onAppClick: (AppInfo) -> Unit
     ) {
         container.removeAllViews()
@@ -75,7 +77,7 @@ class FluidHomeLayout : HomeLayout {
 
         container.addView(root)
 
-        ProfileVisualsProvider.animate(root, MotionStyle.FLUID)
-        ProfileVisualsProvider.animateChildren(grid, MotionStyle.FLUID)
+        ProfileVisualsProvider.animate(root, MotionStyle.FLUID, quality, reducedMotion)
+        ProfileVisualsProvider.animateChildren(grid, MotionStyle.FLUID, quality, reducedMotion)
     }
 }

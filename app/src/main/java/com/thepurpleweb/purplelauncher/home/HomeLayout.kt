@@ -2,6 +2,7 @@ package com.thepurpleweb.purplelauncher.home
 
 import android.view.ViewGroup
 import com.thepurpleweb.purplelauncher.apps.AppInfo
+import com.thepurpleweb.purplelauncher.performance.VisualQuality
 
 /**
  * Each profile provides its own implementation of this interface.
@@ -14,6 +15,8 @@ interface HomeLayout {
     fun build(
         container: ViewGroup,
         apps: List<AppInfo>,
+        quality: VisualQuality,
+        reducedMotion: Boolean,
         onAppClick: (AppInfo) -> Unit
     )
 }

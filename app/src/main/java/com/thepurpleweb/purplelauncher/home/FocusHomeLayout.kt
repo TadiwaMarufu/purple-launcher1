@@ -7,6 +7,7 @@ import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.TextView
 import com.thepurpleweb.purplelauncher.apps.AppInfo
+import com.thepurpleweb.purplelauncher.performance.VisualQuality
 import com.thepurpleweb.purplelauncher.search.SearchResultAdapter
 import java.util.Calendar
 
@@ -15,6 +16,8 @@ class FocusHomeLayout : HomeLayout {
     override fun build(
         container: ViewGroup,
         apps: List<AppInfo>,
+        quality: VisualQuality,
+        reducedMotion: Boolean,
         onAppClick: (AppInfo) -> Unit
     ) {
         container.removeAllViews()
@@ -71,7 +74,7 @@ class FocusHomeLayout : HomeLayout {
 
         container.addView(root)
 
-        ProfileVisualsProvider.animate(root, MotionStyle.FOCUS)
-        ProfileVisualsProvider.animateChildren(listView, MotionStyle.FOCUS)
+        ProfileVisualsProvider.animate(root, MotionStyle.FOCUS, quality, reducedMotion)
+        ProfileVisualsProvider.animateChildren(listView, MotionStyle.FOCUS, quality, reducedMotion)
     }
 }

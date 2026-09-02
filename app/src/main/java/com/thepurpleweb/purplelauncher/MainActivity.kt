@@ -37,6 +37,7 @@ import com.thepurpleweb.purplelauncher.profile.Profile
 import com.thepurpleweb.purplelauncher.profile.ProfileEngine
 import com.thepurpleweb.purplelauncher.search.SearchActivity
 import com.thepurpleweb.purplelauncher.settings.SettingsActivity
+import com.thepurpleweb.purplelauncher.settings.SettingsRepository
 import com.thepurpleweb.purplelauncher.widgets.WidgetRepository
 import kotlinx.coroutines.launch
 import java.io.File
@@ -51,6 +52,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var gestureDetector: LauncherGestureDetector
 
     private lateinit var widgetRepository: WidgetRepository
+    private lateinit var settingsRepository: SettingsRepository
     private lateinit var intelligenceManager: IntelligenceManager
 
     private lateinit var appWidgetManager: AppWidgetManager
@@ -104,6 +106,7 @@ class MainActivity : AppCompatActivity() {
         appRepository = AppRepository(applicationContext)
         gestureRepository = GestureRepository(applicationContext)
         widgetRepository = WidgetRepository(applicationContext)
+        settingsRepository = SettingsRepository(applicationContext)
         intelligenceManager = IntelligenceManager(applicationContext)
 
         appWidgetManager = AppWidgetManager.getInstance(this)
@@ -199,7 +202,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun renderHomeLayout(profile: Profile) {
         val layout = HomeLayoutFactory.forProfile(profile)
-        layout.build(homeContentContainer, curatedApps) { app ->
+        val quality = determineVisualQuality()
+        val reducedMotion = settingsRepository.settings.value.reducedMotion
+        layout.build(homeContentContainer, curatedApps, quality, reducedMotion) { app ->
             appRepository.launchApp(app.packageName)
         }
     }

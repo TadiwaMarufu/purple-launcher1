@@ -2,15 +2,15 @@ package com.thepurpleweb.purplelauncher.home
 
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
-import android.animation.ValueAnimator
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.DecelerateInterpolator
+import android.view.animation.Interpolator
 import android.view.animation.OvershootInterpolator
-import android.widget.TextView
+import com.thepurpleweb.purplelauncher.performance.VisualQuality
 
 enum class MotionStyle {
     FLUID,
@@ -120,12 +120,70 @@ object ProfileVisualsProvider {
         }
     }
 
+    /**
+     * Reduced-complexity settings per profile, used when VisualQuality
+     * is LOW. Each profile keeps its own duration/interpolator identity
+     * so it's still recognizable, but drops scale/rotation and per-child
+     * staggering — the expensive parts on weak hardware. Matches the
+     * spec's own example: "Fluid HIGH: blur+depth+spring+parallax,
+     * Fluid LOW: spring+simplified depth — personality still recognizable."
+     */
+    private data class SimplifiedMotion(
+        val durationMs: Long,
+        val interpolator: Interpolator,
+        val translateDp: Int
+    )
+
+    private fun simplifiedFor(style: MotionStyle): SimplifiedMotion {
+        return when (style) {
+            MotionStyle.FLUID -> SimplifiedMotion(400L, DecelerateInterpolator(), 10)
+            MotionStyle.PREMIUM -> SimplifiedMotion(300L, DecelerateInterpolator(1.5f), 6)
+            MotionStyle.CALM -> SimplifiedMotion(220L, DecelerateInterpolator(), 0)
+            MotionStyle.FOCUS -> SimplifiedMotion(180L, DecelerateInterpolator(), 8)
+            MotionStyle.EXPRESSIVE -> SimplifiedMotion(420L, DecelerateInterpolator(), 14)
+        }
+    }
+
+    private fun snapToFinalState(view: View) {
+        view.alpha = 1f
+        view.translationX = 0f
+        view.translationY = 0f
+        view.rotation = 0f
+        view.scaleX = 1f
+        view.scaleY = 1f
+    }
+
     fun animate(
         root: View,
-        style: MotionStyle
+        style: MotionStyle,
+        quality: VisualQuality,
+        reducedMotion: Boolean
     ) {
+        if (reducedMotion) {
+            snapToFinalState(root)
+            return
+        }
+
         root.alpha = 0f
 
+        if (quality == VisualQuality.LOW) {
+            val simplified = simplifiedFor(style)
+
+            root.translationY = dp(root, simplified.translateDp).toFloat()
+
+            AnimatorSet().apply {
+                playTogether(
+                    ObjectAnimator.ofFloat(root, View.ALPHA, 0f, 1f),
+                    ObjectAnimator.ofFloat(root, View.TRANSLATION_Y, root.translationY, 0f)
+                )
+                duration = simplified.durationMs
+                interpolator = simplified.interpolator
+                start()
+            }
+            return
+        }
+
+        // MEDIUM / HIGH — full choreography, unchanged.
         when (style) {
             MotionStyle.FLUID -> {
                 root.translationY = dp(root, 18).toFloat()
@@ -208,10 +266,41 @@ object ProfileVisualsProvider {
 
     fun animateChildren(
         container: ViewGroup,
-        style: MotionStyle
+        style: MotionStyle,
+        quality: VisualQuality,
+        reducedMotion: Boolean
     ) {
         val count = container.childCount
 
+        if (reducedMotion) {
+            for (i in 0 until count) {
+                snapToFinalState(container.getChildAt(i))
+            }
+            return
+        }
+
+        if (quality == VisualQuality.LOW) {
+            // All children fade together, no stagger, no scale/rotation —
+            // this is the expensive part on weak hardware (N animators
+            // running concurrently with per-item delay). Duration/
+            // interpolator still identifies the profile.
+            val simplified = simplifiedFor(style)
+
+            for (i in 0 until count) {
+                val child = container.getChildAt(i)
+                child.alpha = 0f
+
+                child.animate()
+                    .alpha(1f)
+                    .setStartDelay(0L)
+                    .setDuration(simplified.durationMs)
+                    .setInterpolator(simplified.interpolator)
+                    .start()
+            }
+            return
+        }
+
+        // MEDIUM / HIGH — full per-child choreography, unchanged.
         for (i in 0 until count) {
             val child = container.getChildAt(i)
 

@@ -7,12 +7,15 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.thepurpleweb.purplelauncher.apps.AppInfo
 import com.thepurpleweb.purplelauncher.apps.HomeAppAdapter
+import com.thepurpleweb.purplelauncher.performance.VisualQuality
 
 class ExpressiveHomeLayout : HomeLayout {
 
     override fun build(
         container: ViewGroup,
         apps: List<AppInfo>,
+        quality: VisualQuality,
+        reducedMotion: Boolean,
         onAppClick: (AppInfo) -> Unit
     ) {
         container.removeAllViews()
@@ -79,7 +82,7 @@ class ExpressiveHomeLayout : HomeLayout {
 
         container.addView(root)
 
-        ProfileVisualsProvider.animate(root, MotionStyle.EXPRESSIVE)
-        ProfileVisualsProvider.animateChildren(grid, MotionStyle.EXPRESSIVE)
+        ProfileVisualsProvider.animate(root, MotionStyle.EXPRESSIVE, quality, reducedMotion)
+        ProfileVisualsProvider.animateChildren(grid, MotionStyle.EXPRESSIVE, quality, reducedMotion)
     }
 }

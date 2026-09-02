@@ -5,12 +5,15 @@ import android.view.ViewGroup
 import android.widget.GridView
 import com.thepurpleweb.purplelauncher.apps.AppInfo
 import com.thepurpleweb.purplelauncher.apps.HomeAppAdapter
+import com.thepurpleweb.purplelauncher.performance.VisualQuality
 
 class CalmHomeLayout : HomeLayout {
 
     override fun build(
         container: ViewGroup,
         apps: List<AppInfo>,
+        quality: VisualQuality,
+        reducedMotion: Boolean,
         onAppClick: (AppInfo) -> Unit
     ) {
         container.removeAllViews()
@@ -36,7 +39,7 @@ class CalmHomeLayout : HomeLayout {
 
         container.addView(gridView)
 
-        ProfileVisualsProvider.animate(gridView, MotionStyle.CALM)
-        ProfileVisualsProvider.animateChildren(gridView, MotionStyle.CALM)
+        ProfileVisualsProvider.animate(gridView, MotionStyle.CALM, quality, reducedMotion)
+        ProfileVisualsProvider.animateChildren(gridView, MotionStyle.CALM, quality, reducedMotion)
     }
 }
