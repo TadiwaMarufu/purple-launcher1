@@ -6,6 +6,7 @@ import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
+import com.thepurpleweb.purplelauncher.notifications.PurpleNotificationListenerService
 
 class NowBarMediaManager(
     private val context: Context,
@@ -30,7 +31,15 @@ class NowBarMediaManager(
 
     fun start() {
         try {
-            val componentName = ComponentName(context, NotificationListenerBridge::class.java)
+            // Must reference an actual, manifest-registered notification
+            // listener service that the user has granted access to.
+            // PurpleNotificationListenerService is the one declared in
+            // AndroidManifest.xml — this was previously pointed at a
+            // NotificationListenerBridge class that was never registered,
+            // which caused getActiveSessions() to throw a SecurityException
+            // on every call, silently swallowed below, so MUSIC never
+            // populated regardless of what was playing.
+            val componentName = ComponentName(context, PurpleNotificationListenerService::class.java)
             sessionManager?.addOnActiveSessionsChangedListener(sessionListener, componentName)
             val initial = sessionManager?.getActiveSessions(componentName)
             attachToActiveSession(initial)
