@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+        Home-screen-only theme. windowShowWallpaper is the documented,
+        official Android mechanism for an activity to render behind the
+        live wallpaper — this is what the window-flag-only approach was
+        missing. NoActionBar because a launcher home screen never shows
+        one. windowBackground is transparent so nothing opaque paints
+        over the wallpaper surface.
+    -->
+    <style name="Theme.PurpleLauncher.Home" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowShowWallpaper">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:colorBackgroundCacheHint">@null</item>
+        <item name="android:windowIsTranslucent">true</item>
+    </style>
+
+</resources>

@@ -100,9 +100,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         super.onCreate(savedInstanceState)
-        window.setFormat(android.graphics.PixelFormat.TRANSLUCENT)
-        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER)
-        window.setBackgroundDrawable(null)
         setContentView(R.layout.activity_main)
 
         profileEngine = ProfileEngine.getInstance(applicationContext)
