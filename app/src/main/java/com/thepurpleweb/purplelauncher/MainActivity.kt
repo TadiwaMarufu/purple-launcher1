@@ -101,6 +101,7 @@ class MainActivity : AppCompatActivity() {
 
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER)
 
         profileEngine = ProfileEngine.getInstance(applicationContext)
         appRepository = AppRepository(applicationContext)

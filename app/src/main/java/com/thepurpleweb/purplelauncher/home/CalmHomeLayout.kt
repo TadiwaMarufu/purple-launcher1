@@ -21,7 +21,7 @@ class CalmHomeLayout : HomeLayout {
         val context = container.context
         val visuals = ProfileVisualsProvider.forMotion(MotionStyle.CALM)
 
-        container.setBackgroundColor(visuals.background)
+        container.setBackgroundColor(ProfileVisualsProvider.withAlpha(visuals.background, ProfileVisualsProvider.scrimAlphaFor(MotionStyle.CALM)))
 
         val gridView = GridView(context).apply {
             numColumns = 4

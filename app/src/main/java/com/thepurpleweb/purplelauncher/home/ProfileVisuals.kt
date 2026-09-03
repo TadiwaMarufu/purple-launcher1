@@ -35,6 +35,28 @@ data class ProfileVisuals(
 
 object ProfileVisualsProvider {
 
+    // Per-profile scrim opacity over the live wallpaper. Higher = more
+    // opaque = less wallpaper visible. Calm/Focus stay near-opaque
+    // (restrained, low visual noise); Expressive is most transparent
+    // (visual, experimental); others land in between. Never fully
+    // opaque or fully transparent, so text stays legible either way.
+    fun scrimAlphaFor(style: MotionStyle): Int = when (style) {
+        MotionStyle.CALM -> 235
+        MotionStyle.FOCUS -> 235
+        MotionStyle.PREMIUM -> 225
+        MotionStyle.FLUID -> 195
+        MotionStyle.EXPRESSIVE -> 170
+    }
+
+    fun withAlpha(color: Int, alpha: Int): Int {
+        return Color.argb(
+            alpha,
+            Color.red(color),
+            Color.green(color),
+            Color.blue(color)
+        )
+    }
+
     fun forMotion(style: MotionStyle): ProfileVisuals {
         return when (style) {
             MotionStyle.FLUID -> ProfileVisuals(

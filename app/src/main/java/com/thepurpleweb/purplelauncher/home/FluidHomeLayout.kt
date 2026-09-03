@@ -23,7 +23,7 @@ class FluidHomeLayout : HomeLayout {
         val context = container.context
         val visuals = ProfileVisualsProvider.forMotion(MotionStyle.FLUID)
 
-        container.setBackgroundColor(visuals.background)
+        container.setBackgroundColor(ProfileVisualsProvider.withAlpha(visuals.background, ProfileVisualsProvider.scrimAlphaFor(MotionStyle.FLUID)))
 
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL

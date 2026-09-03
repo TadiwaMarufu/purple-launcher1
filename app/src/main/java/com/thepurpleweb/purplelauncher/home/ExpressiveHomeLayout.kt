@@ -23,7 +23,7 @@ class ExpressiveHomeLayout : HomeLayout {
         val context = container.context
         val visuals = ProfileVisualsProvider.forMotion(MotionStyle.EXPRESSIVE)
 
-        container.setBackgroundColor(visuals.background)
+        container.setBackgroundColor(ProfileVisualsProvider.withAlpha(visuals.background, ProfileVisualsProvider.scrimAlphaFor(MotionStyle.EXPRESSIVE)))
 
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL

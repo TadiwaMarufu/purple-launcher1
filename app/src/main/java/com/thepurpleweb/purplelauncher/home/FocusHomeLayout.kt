@@ -25,7 +25,7 @@ class FocusHomeLayout : HomeLayout {
         val context = container.context
         val visuals = ProfileVisualsProvider.forMotion(MotionStyle.FOCUS)
 
-        container.setBackgroundColor(visuals.background)
+        container.setBackgroundColor(ProfileVisualsProvider.withAlpha(visuals.background, ProfileVisualsProvider.scrimAlphaFor(MotionStyle.FOCUS)))
 
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
