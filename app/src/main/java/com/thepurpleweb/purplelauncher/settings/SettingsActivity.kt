@@ -1,7 +1,10 @@
 package com.thepurpleweb.purplelauncher.settings
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.os.Bundle
 import android.graphics.Color
+import android.provider.Settings
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.LinearLayout
@@ -145,6 +148,19 @@ class SettingsActivity : AppCompatActivity() {
 
         addSection(
             root,
+            "WALLPAPER"
+        )
+
+        addButton(
+            root,
+            "Change wallpaper",
+            "Open the system wallpaper picker."
+        ) {
+            openWallpaperPicker()
+        }
+
+        addSection(
+            root,
             "BEHAVIOR"
         )
 
@@ -220,6 +236,26 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(scroll)
     }
 
+    private fun openWallpaperPicker() {
+        try {
+            startActivity(
+                Intent(Intent.ACTION_SET_WALLPAPER)
+            )
+        } catch (_: ActivityNotFoundException) {
+            // Some OEM builds don't resolve ACTION_SET_WALLPAPER directly.
+            // Fall back to system display settings rather than doing
+            // nothing or crashing.
+            try {
+                startActivity(
+                    Intent(Settings.ACTION_DISPLAY_SETTINGS)
+                )
+            } catch (_: Exception) {
+                // Nothing more we can legitimately do — degrade silently
+                // rather than fake a picker.
+            }
+        }
+    }
+
     private fun addSection(
         parent: LinearLayout,
         title: String
@@ -246,6 +282,64 @@ class SettingsActivity : AppCompatActivity() {
             }
 
         parent.addView(view)
+    }
+
+    private fun addButton(
+        parent: LinearLayout,
+        title: String,
+        description: String,
+        onClick: () -> Unit
+    ) {
+
+        val container =
+            LinearLayout(this).apply {
+                orientation =
+                    LinearLayout.VERTICAL
+
+                minimumHeight =
+                    dp(68)
+
+                gravity =
+                    Gravity.CENTER_VERTICAL
+
+                isClickable = true
+                isFocusable = true
+
+                layoutParams =
+                    LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    )
+
+                setOnClickListener {
+                    onClick()
+                }
+            }
+
+        val titleView =
+            TextView(this).apply {
+                text = title
+                textSize = 16f
+                setTextColor(Color.WHITE)
+            }
+
+        val descriptionView =
+            TextView(this).apply {
+                text = description
+                textSize = 12f
+                setTextColor(
+                    Color.rgb(
+                        145,
+                        145,
+                        145
+                    )
+                )
+            }
+
+        container.addView(titleView)
+        container.addView(descriptionView)
+
+        parent.addView(container)
     }
 
     private fun addSwitch(
