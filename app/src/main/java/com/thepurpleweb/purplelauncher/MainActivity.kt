@@ -8,6 +8,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.Gravity
 import android.view.MotionEvent
+import android.view.View
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -21,6 +22,9 @@ import com.thepurpleweb.purplelauncher.gestures.GestureRepository
 import com.thepurpleweb.purplelauncher.gestures.LauncherGestureDetector
 import com.thepurpleweb.purplelauncher.home.HomeLayoutFactory
 import com.thepurpleweb.purplelauncher.intelligence.IntelligenceManager
+import com.thepurpleweb.purplelauncher.nativewidgets.NativeWidgetFactory
+import com.thepurpleweb.purplelauncher.nativewidgets.NativeWidgetType
+import com.thepurpleweb.purplelauncher.nativewidgets.NativeWidgetView
 import com.thepurpleweb.purplelauncher.notifications.NotificationCenterActivity
 import com.thepurpleweb.purplelauncher.nowbar.NowBarCallManager
 import com.thepurpleweb.purplelauncher.nowbar.NowBarController
@@ -71,7 +75,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var nowBarTimerManager: NowBarTimerManager
     private lateinit var nowBarNotificationBridge: NowBarNotificationBridge
 
-    private var currentWidgetView: AppWidgetHostView? = null
+    // Generic now — holds either a real AppWidgetHostView (Layer 1) or a
+    // NativeWidgetView (Layer 2). Only one occupies the slot at a time.
+    private var currentWidgetView: View? = null
     private var pendingProvider: AppWidgetProviderInfo? = null
 
     private var curatedApps: List<AppInfo> = emptyList()
@@ -166,6 +172,7 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         appWidgetHost.startListening()
+        (currentWidgetView as? NativeWidgetView)?.start()
 
         if (::nowBarCoordinator.isInitialized) nowBarCoordinator.start()
         if (::nowBarMediaManager.isInitialized) nowBarMediaManager.start()
@@ -179,6 +186,7 @@ class MainActivity : AppCompatActivity() {
         if (::nowBarMediaManager.isInitialized) nowBarMediaManager.stop()
         if (::nowBarCoordinator.isInitialized) nowBarCoordinator.stop()
 
+        (currentWidgetView as? NativeWidgetView)?.stop()
         appWidgetHost.stopListening()
         super.onStop()
     }
@@ -323,7 +331,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ---------------------------------------------------------
-    // WIDGET HOSTING
+    // WIDGET HOSTING (Layer 1: real Android widgets, Layer 2: native)
     // ---------------------------------------------------------
 
     private fun setupWidgetArea() {
@@ -334,6 +342,12 @@ class MainActivity : AppCompatActivity() {
                 confirmRemoveWidget()
             }
             true
+        }
+
+        val savedNativeType = widgetRepository.getSavedNativeWidgetType()
+        if (savedNativeType != null) {
+            attachNativeWidget(savedNativeType)
+            return
         }
 
         val savedId = widgetRepository.getSavedWidgetId()
@@ -349,14 +363,44 @@ class MainActivity : AppCompatActivity() {
 
     private fun showWidgetPicker() {
         val providers = appWidgetManager.installedProviders
-        if (providers.isEmpty()) return
+        val nativeTypes = NativeWidgetType.entries.toList()
+        val nativeLabels = nativeTypes.map { "Purple: ${it.displayName}" }
+        val androidLabels = providers.map { it.loadLabel(packageManager).toString() }
+        val allLabels = (nativeLabels + androidLabels).toTypedArray()
 
-        val labels = providers.map { it.loadLabel(packageManager) }.toTypedArray()
+        if (allLabels.isEmpty()) return
 
         AlertDialog.Builder(this)
             .setTitle("Choose a widget")
-            .setItems(labels) { _, which -> beginBind(providers[which]) }
+            .setItems(allLabels) { _, which ->
+                if (which < nativeTypes.size) {
+                    attachNativeWidget(nativeTypes[which])
+                } else {
+                    beginBind(providers[which - nativeTypes.size])
+                }
+            }
             .show()
+    }
+
+    private fun attachNativeWidget(type: NativeWidgetType) {
+        (currentWidgetView as? NativeWidgetView)?.stop()
+
+        val nativeView = NativeWidgetFactory.create(type, this)
+
+        widgetContainer.removeAllViews()
+        widgetContainer.addView(
+            nativeView,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        nativeView.start()
+
+        currentWidgetView = nativeView
+        widgetRepository.clearWidgetId()
+        widgetRepository.saveNativeWidgetType(type)
     }
 
     private fun beginBind(provider: AppWidgetProviderInfo) {
@@ -419,6 +463,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun attachWidgetView(appWidgetId: Int, info: AppWidgetProviderInfo) {
+        (currentWidgetView as? NativeWidgetView)?.stop()
+
         val hostView = appWidgetHost.createView(this, appWidgetId, info)
         hostView.setAppWidget(appWidgetId, info)
 
@@ -432,6 +478,7 @@ class MainActivity : AppCompatActivity() {
         )
 
         currentWidgetView = hostView
+        widgetRepository.clearNativeWidgetType()
         widgetRepository.saveWidgetId(appWidgetId)
     }
 
@@ -444,6 +491,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun removeCurrentWidget() {
+        (currentWidgetView as? NativeWidgetView)?.stop()
+
         val savedId = widgetRepository.getSavedWidgetId()
         if (savedId != -1) {
             appWidgetHost.deleteAppWidgetId(savedId)
@@ -467,6 +516,7 @@ class MainActivity : AppCompatActivity() {
 
         currentWidgetView = null
         widgetRepository.clearWidgetId()
+        widgetRepository.clearNativeWidgetType()
     }
 
     // ---------------------------------------------------------
