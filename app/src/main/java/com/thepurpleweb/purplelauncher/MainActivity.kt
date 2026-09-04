@@ -22,6 +22,7 @@ import com.thepurpleweb.purplelauncher.gestures.GestureRepository
 import com.thepurpleweb.purplelauncher.gestures.LauncherGestureDetector
 import com.thepurpleweb.purplelauncher.home.HomeLayoutFactory
 import com.thepurpleweb.purplelauncher.intelligence.IntelligenceManager
+import com.thepurpleweb.purplelauncher.intelligence.IntelligenceRecommendation
 import com.thepurpleweb.purplelauncher.nativewidgets.NativeWidgetFactory
 import com.thepurpleweb.purplelauncher.nativewidgets.NativeWidgetType
 import com.thepurpleweb.purplelauncher.nativewidgets.NativeWidgetView
@@ -75,12 +76,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var nowBarTimerManager: NowBarTimerManager
     private lateinit var nowBarNotificationBridge: NowBarNotificationBridge
 
-    // Generic now — holds either a real AppWidgetHostView (Layer 1) or a
-    // NativeWidgetView (Layer 2). Only one occupies the slot at a time.
     private var currentWidgetView: View? = null
     private var pendingProvider: AppWidgetProviderInfo? = null
 
     private var curatedApps: List<AppInfo> = emptyList()
+    private var currentRecommendations: List<IntelligenceRecommendation> = emptyList()
 
     private val curatedPackageHints = listOf(
         "com.android.dialer",
@@ -93,6 +93,20 @@ class MainActivity : AppCompatActivity() {
         "com.android.chrome",
         "org.mozilla.firefox",
         "com.android.vending"
+    )
+
+    // Lightweight keyword-based emphasis matching for Adaptive Intelligence
+    // recommendations. Deliberately simple/duplicated rather than reusing
+    // AppRepository's private category functions — same acceptable-but-
+    // flagged tradeoff as the AppCategorizer/AppRepository duplication
+    // elsewhere in this project.
+    private val mediaKeywords = listOf("spotify", "youtube", "music", "netflix", "player")
+    private val productivityKeywords = listOf("docs", "sheets", "calendar", "office", "notion", "slack", "teams", "gmail")
+    private val communicationKeywords = listOf("message", "whatsapp", "telegram", "mail", "dialer", "phone", "signal")
+    private val navigationPackages = setOf(
+        "com.google.android.apps.maps",
+        "com.waze",
+        "com.here.app.maps"
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -210,11 +224,55 @@ class MainActivity : AppCompatActivity() {
 
     private fun renderHomeLayout(profile: Profile) {
         val layout = HomeLayoutFactory.forProfile(profile)
-        val quality = determineVisualQuality()
-        val reducedMotion = settingsRepository.settings.value.reducedMotion
-        layout.build(homeContentContainer, curatedApps, quality, reducedMotion) { app ->
+
+        var quality = determineVisualQuality()
+        var reducedMotion = settingsRepository.settings.value.reducedMotion
+
+        if (currentRecommendations.contains(IntelligenceRecommendation.ReduceVisualEffects)) {
+            quality = VisualQuality.LOW
+        }
+        if (currentRecommendations.contains(IntelligenceRecommendation.QuietPresentation)) {
+            reducedMotion = true
+        }
+
+        val orderedApps = applyEmphasis(curatedApps, currentRecommendations)
+
+        layout.build(homeContentContainer, orderedApps, quality, reducedMotion) { app ->
             appRepository.launchApp(app.packageName)
         }
+    }
+
+    private fun applyEmphasis(
+        apps: List<AppInfo>,
+        recommendations: List<IntelligenceRecommendation>
+    ): List<AppInfo> {
+        val emphasisMatchers = mutableListOf<(AppInfo) -> Boolean>()
+
+        if (recommendations.contains(IntelligenceRecommendation.EmphasizeMedia)) {
+            emphasisMatchers += { app -> matchesAny(app, mediaKeywords) }
+        }
+        if (recommendations.contains(IntelligenceRecommendation.EmphasizeProductivity)) {
+            emphasisMatchers += { app -> matchesAny(app, productivityKeywords) }
+        }
+        if (recommendations.contains(IntelligenceRecommendation.EmphasizeCommunication)) {
+            emphasisMatchers += { app -> matchesAny(app, communicationKeywords) }
+        }
+        if (recommendations.contains(IntelligenceRecommendation.EmphasizeNavigation)) {
+            emphasisMatchers += { app -> app.packageName in navigationPackages }
+        }
+
+        if (emphasisMatchers.isEmpty()) {
+            return apps
+        }
+
+        return apps.sortedByDescending { app ->
+            emphasisMatchers.any { matcher -> matcher(app) }
+        }
+    }
+
+    private fun matchesAny(app: AppInfo, keywords: List<String>): Boolean {
+        val text = "${app.label} ${app.packageName}".lowercase()
+        return keywords.any { text.contains(it) }
     }
 
     // ---------------------------------------------------------
@@ -326,8 +384,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun evaluateIntelligence(profile: Profile) {
         try {
-            intelligenceManager.evaluate(profile)
-        } catch (_: Exception) {}
+            val isMediaPlaying = ::nowBarCoordinator.isInitialized &&
+                nowBarCoordinator.current()?.type == NowBarType.MUSIC
+
+            currentRecommendations = intelligenceManager.evaluate(profile, isMediaPlaying)
+        } catch (_: Exception) {
+            currentRecommendations = emptyList()
+        }
     }
 
     // ---------------------------------------------------------
@@ -527,9 +590,9 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             profileEngine.current.collect { profile ->
                 profileLabel.text = profile.displayName
+                evaluateIntelligence(profile)
                 renderHomeLayout(profile)
                 updateNowBar(profile)
-                evaluateIntelligence(profile)
             }
         }
     }

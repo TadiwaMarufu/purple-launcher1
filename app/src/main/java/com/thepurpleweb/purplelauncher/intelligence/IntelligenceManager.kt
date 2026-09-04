@@ -28,12 +28,21 @@ class IntelligenceManager(
             preferences
         )
 
+    /**
+     * isMediaPlaying must be supplied by the caller — LauncherContextProvider
+     * has no visibility into media session state (that lives in the Now Bar
+     * subsystem), so without this parameter it silently defaulted to false
+     * forever, meaning EmphasizeMedia could never actually fire.
+     */
     fun evaluate(
-        profile: Profile
+        profile: Profile,
+        isMediaPlaying: Boolean = false
     ): List<IntelligenceRecommendation> {
 
         val context =
-            contextProvider.snapshot()
+            contextProvider.snapshot().copy(
+                isMediaPlaying = isMediaPlaying
+            )
 
         return engine.evaluate(
             context,
