@@ -1,7 +1,8 @@
 package com.thepurpleweb.purplelauncher.nowbar
 
 import android.content.Context
-import android.graphics.Color
+import android.content.res.ColorStateList
+import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.View
@@ -9,6 +10,8 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import com.thepurpleweb.purplelauncher.home.MotionStyle
+import com.thepurpleweb.purplelauncher.home.ProfileVisualsProvider
 import com.thepurpleweb.purplelauncher.performance.VisualQuality
 import com.thepurpleweb.purplelauncher.profile.Profile
 
@@ -21,7 +24,6 @@ class NowBarView @JvmOverloads constructor(
     private val container = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(32, 24, 32, 24)
-        setBackgroundColor(Color.parseColor("#1E1E2C"))
     }
 
     private val compactHeader = LinearLayout(context).apply {
@@ -29,15 +31,17 @@ class NowBarView @JvmOverloads constructor(
         gravity = Gravity.CENTER_VERTICAL
     }
 
+    private val accentDot = View(context).apply {
+        layoutParams = LinearLayout.LayoutParams(dp(10), dp(10)).apply {
+            marginEnd = dp(10)
+        }
+    }
+
     private val titleView = TextView(context).apply {
-        setTextColor(Color.WHITE)
-        textSize = 15f
         setSingleLine()
     }
 
     private val subtitleView = TextView(context).apply {
-        setTextColor(Color.LTGRAY)
-        textSize = 13f
         setSingleLine()
     }
 
@@ -53,24 +57,28 @@ class NowBarView @JvmOverloads constructor(
         setPadding(0, 16, 0, 0)
     }
 
-    private val progressBar = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
+    private val progressBar = ProgressBar(
+        context, null, android.R.attr.progressBarStyleHorizontal
+    ).apply {
         max = 100
         visibility = View.GONE
     }
 
     private val expandedDetailText = TextView(context).apply {
-        setTextColor(Color.GRAY)
         textSize = 12f
         visibility = View.GONE
     }
 
     private var isExpanded = false
     private var currentItem: NowBarItem? = null
+    private var currentProfile: Profile = Profile.Calm
+
     private var onSearchClick: (() -> Unit)? = null
     private var onProfileClick: (() -> Unit)? = null
     private var onNotificationsClick: (() -> Unit)? = null
 
     init {
+        compactHeader.addView(accentDot)
         compactHeader.addView(
             textContainer,
             LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
@@ -78,26 +86,26 @@ class NowBarView @JvmOverloads constructor(
 
         expandedContent.addView(
             progressBar,
-            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 12)
+            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(4))
         )
         expandedContent.addView(
             expandedDetailText,
-            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                topMargin = 12
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dp(12)
             }
         )
 
         container.addView(compactHeader)
         container.addView(expandedContent)
 
-        addView(
-            container,
-            LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
-        )
+        addView(container, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
 
-        setOnClickListener {
-            toggleExpand()
-        }
+        setOnClickListener { toggleExpand() }
+
+        applyVisuals(currentProfile)
     }
 
     fun setActions(
@@ -110,27 +118,56 @@ class NowBarView @JvmOverloads constructor(
         this.onNotificationsClick = onNotifications
     }
 
-    fun setProfile(profile: Profile, quality: VisualQuality) {
-        val colorHex = when (profile) {
-            Profile.Fluid -> "#2A2A3D"
-            Profile.Premium -> "#1F1F1F"
-            Profile.Calm -> "#1D2B2A"
-            Profile.Focus -> "#1A2433"
-            Profile.Expressive -> "#331A2E"
-        }
-        container.setBackgroundColor(Color.parseColor(colorHex))
+    fun setProfile(profile: Profile, quality: VisualQuality, reducedMotion: Boolean = false) {
+        currentProfile = profile
+        applyVisuals(profile)
     }
 
-    fun setState(item: NowBarItem?, quality: VisualQuality) {
+    private fun motionStyleFor(profile: Profile): MotionStyle = when (profile) {
+        Profile.Fluid -> MotionStyle.FLUID
+        Profile.Premium -> MotionStyle.PREMIUM
+        Profile.Calm -> MotionStyle.CALM
+        Profile.Focus -> MotionStyle.FOCUS
+        Profile.Expressive -> MotionStyle.EXPRESSIVE
+    }
+
+    private fun applyVisuals(profile: Profile) {
+        val visuals = ProfileVisualsProvider.forMotion(motionStyleFor(profile))
+
+        ProfileVisualsProvider.roundedBackground(container, visuals.card, visuals.cornerRadiusDp)
+
+        titleView.setTextColor(visuals.primaryText)
+        titleView.textSize = visuals.bodySizeSp + 2f
+
+        subtitleView.setTextColor(visuals.secondaryText)
+        subtitleView.textSize = visuals.bodySizeSp - 1f
+
+        expandedDetailText.setTextColor(visuals.secondaryText)
+
+        accentDot.background = ovalDrawable(visuals.accent)
+        progressBar.progressTintList = ColorStateList.valueOf(visuals.accent)
+    }
+
+    private fun ovalDrawable(color: Int): GradientDrawable {
+        return GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(color)
+        }
+    }
+
+    fun setState(item: NowBarItem?, quality: VisualQuality, reducedMotion: Boolean = false) {
+        val previousKey = currentItem?.let { "${it.type}-${it.title}-${it.subtitle}" }
         currentItem = item
 
         if (item == null) {
             titleView.text = "Purple Launcher"
             subtitleView.text = "Idle"
+            accentDot.alpha = 0.3f
             expandedContent.visibility = View.GONE
             return
         }
 
+        accentDot.alpha = 1f
         titleView.text = item.title
         subtitleView.text = item.subtitle?.ifEmpty { item.type.name } ?: item.type.name
 
@@ -148,6 +185,15 @@ class NowBarView @JvmOverloads constructor(
         } else {
             expandedContent.visibility = View.GONE
         }
+
+        // Only pulse when content actually changed (not on every tick of
+        // an unrelated re-render), and only when quality/motion settings
+        // allow it — this is the previously-unused ProfileVisualsProvider
+        // .pulse() finally getting a caller.
+        val newKey = "${item.type}-${item.title}-${item.subtitle}"
+        if (newKey != previousKey && quality != VisualQuality.LOW && !reducedMotion) {
+            ProfileVisualsProvider.pulse(container, motionStyleFor(currentProfile))
+        }
     }
 
     private fun toggleExpand() {
@@ -160,4 +206,6 @@ class NowBarView @JvmOverloads constructor(
             expandedContent.visibility = View.GONE
         }
     }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 }

@@ -287,7 +287,7 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             nowBarController.state.collect { state ->
-                nowBarView.setState(state.primary, determineVisualQuality())
+                nowBarView.setState(state.primary, determineVisualQuality(), settingsRepository.settings.value.reducedMotion)
             }
         }
 
@@ -325,7 +325,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateNowBar(profile: Profile) {
         val quality = determineVisualQuality()
-        nowBarView.setProfile(profile, quality)
+        nowBarView.setProfile(profile, quality, settingsRepository.settings.value.reducedMotion)
 
         val activeItem = nowBarCoordinator.current()
         nowBarController.setPrimary(activeItem ?: buildIdleItem(profile))
