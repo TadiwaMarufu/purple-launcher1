@@ -195,10 +195,12 @@ class MainActivity : AppCompatActivity() {
         if (::nowBarMediaManager.isInitialized) nowBarMediaManager.start()
         if (::nowBarCallManager.isInitialized) nowBarCallManager.start()
         if (::nowBarNotificationBridge.isInitialized) nowBarNotificationBridge.start()
+        freeformCanvasView?.startAll()
     }
 
     override fun onStop() {
         if (::nowBarNotificationBridge.isInitialized) nowBarNotificationBridge.stop()
+        freeformCanvasView?.stopAll()
         if (::nowBarCallManager.isInitialized) nowBarCallManager.stop()
         if (::nowBarMediaManager.isInitialized) nowBarMediaManager.stop()
         if (::nowBarCoordinator.isInitialized) nowBarCoordinator.stop()
@@ -267,6 +269,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderFreeformCanvas(profile: Profile) {
+        freeformCanvasView?.stopAll()
         homeContentContainer.removeAllViews()
 
         val canvas = FreeformCanvasView(this)
@@ -283,6 +286,7 @@ class MainActivity : AppCompatActivity() {
 
         canvas.isEditMode = canvasEditMode
         freeformCanvasView = canvas
+        canvas.startAll()
 
         homeContentContainer.addView(
             canvas,

@@ -3,10 +3,6 @@ package com.thepurpleweb.purplelauncher.canvas
 import android.content.Context
 import com.thepurpleweb.purplelauncher.profile.Profile
 
-/**
- * Simple manual serialization (no JSON library dependency in this
- * project yet) — one module per "id|TYPE|x|y|w|h" entry, joined by ";".
- */
 class CanvasRepository(context: Context) {
 
     private val prefs = context.applicationContext.getSharedPreferences(
@@ -49,15 +45,42 @@ class CanvasRepository(context: Context) {
         }
     }
 
+    // No picker exists yet to add modules manually — so a fresh profile
+    // starts with one of each type stacked vertically, which is the only
+    // way to actually test Battery/Media/Quote until that's built.
     private fun defaultModulesFor(): List<CanvasModuleState> {
         return listOf(
             CanvasModuleState(
                 id = "default_clock",
                 type = CanvasModuleType.CLOCK,
                 xDp = 24f,
-                yDp = 40f,
+                yDp = 24f,
                 widthDp = 180f,
                 heightDp = 90f
+            ),
+            CanvasModuleState(
+                id = "default_battery",
+                type = CanvasModuleType.BATTERY,
+                xDp = 24f,
+                yDp = 130f,
+                widthDp = 160f,
+                heightDp = 110f
+            ),
+            CanvasModuleState(
+                id = "default_media",
+                type = CanvasModuleType.MEDIA,
+                xDp = 24f,
+                yDp = 260f,
+                widthDp = 220f,
+                heightDp = 80f
+            ),
+            CanvasModuleState(
+                id = "default_quote",
+                type = CanvasModuleType.QUOTE,
+                xDp = 24f,
+                yDp = 360f,
+                widthDp = 240f,
+                heightDp = 100f
             )
         )
     }
