@@ -2,7 +2,9 @@ package com.thepurpleweb.purplelauncher.home
 
 import android.graphics.Color
 import android.text.format.DateFormat
+import android.view.Gravity
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.TextView
@@ -25,7 +27,12 @@ class FocusHomeLayout : HomeLayout {
         val context = container.context
         val visuals = ProfileVisualsProvider.forMotion(MotionStyle.FOCUS)
 
-        container.setBackgroundColor(ProfileVisualsProvider.withAlpha(visuals.background, ProfileVisualsProvider.scrimAlphaFor(MotionStyle.FOCUS)))
+        container.setBackgroundColor(
+            ProfileVisualsProvider.withAlpha(
+                visuals.background,
+                ProfileVisualsProvider.scrimAlphaFor(MotionStyle.FOCUS)
+            )
+        )
 
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -34,10 +41,6 @@ class FocusHomeLayout : HomeLayout {
                 8,
                 ProfileVisualsProvider.dp(this, visuals.horizontalPaddingDp),
                 0
-            )
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
             )
         }
 
@@ -60,8 +63,7 @@ class FocusHomeLayout : HomeLayout {
             cacheColorHint = Color.TRANSPARENT
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
+                LinearLayout.LayoutParams.WRAP_CONTENT
             )
             divider = null
             dividerHeight = 0
@@ -72,7 +74,14 @@ class FocusHomeLayout : HomeLayout {
         root.addView(label)
         root.addView(listView)
 
-        container.addView(root)
+        (container as FrameLayout).addView(
+            root,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER_VERTICAL
+            )
+        )
 
         ProfileVisualsProvider.animate(root, MotionStyle.FOCUS, quality, reducedMotion)
         ProfileVisualsProvider.animateChildren(listView, MotionStyle.FOCUS, quality, reducedMotion)

@@ -2,6 +2,7 @@ package com.thepurpleweb.purplelauncher.home
 
 import android.view.Gravity
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.GridView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -23,7 +24,12 @@ class ExpressiveHomeLayout : HomeLayout {
         val context = container.context
         val visuals = ProfileVisualsProvider.forMotion(MotionStyle.EXPRESSIVE)
 
-        container.setBackgroundColor(ProfileVisualsProvider.withAlpha(visuals.background, ProfileVisualsProvider.scrimAlphaFor(MotionStyle.EXPRESSIVE)))
+        container.setBackgroundColor(
+            ProfileVisualsProvider.withAlpha(
+                visuals.background,
+                ProfileVisualsProvider.scrimAlphaFor(MotionStyle.EXPRESSIVE)
+            )
+        )
 
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -33,10 +39,6 @@ class ExpressiveHomeLayout : HomeLayout {
                 ProfileVisualsProvider.dp(this, 8),
                 ProfileVisualsProvider.dp(this, visuals.horizontalPaddingDp),
                 0
-            )
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
             )
         }
 
@@ -70,8 +72,7 @@ class ExpressiveHomeLayout : HomeLayout {
             clipToPadding = false
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
+                LinearLayout.LayoutParams.WRAP_CONTENT
             )
             adapter = HomeAppAdapter(context, apps, onAppClick)
         }
@@ -80,7 +81,14 @@ class ExpressiveHomeLayout : HomeLayout {
         root.addView(subtitle)
         root.addView(grid)
 
-        container.addView(root)
+        (container as FrameLayout).addView(
+            root,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER_VERTICAL
+            )
+        )
 
         ProfileVisualsProvider.animate(root, MotionStyle.EXPRESSIVE, quality, reducedMotion)
         ProfileVisualsProvider.animateChildren(grid, MotionStyle.EXPRESSIVE, quality, reducedMotion)

@@ -2,6 +2,7 @@ package com.thepurpleweb.purplelauncher.home
 
 import android.view.Gravity
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.GridView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -22,20 +23,22 @@ class PremiumHomeLayout : HomeLayout {
 
         val context = container.context
         val visuals = ProfileVisualsProvider.forMotion(MotionStyle.PREMIUM)
+        val density = context.resources.displayMetrics.density
 
-        container.setBackgroundColor(ProfileVisualsProvider.withAlpha(visuals.background, ProfileVisualsProvider.scrimAlphaFor(MotionStyle.PREMIUM)))
+        container.setBackgroundColor(
+            ProfileVisualsProvider.withAlpha(
+                visuals.background,
+                ProfileVisualsProvider.scrimAlphaFor(MotionStyle.PREMIUM)
+            )
+        )
 
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(
-                ProfileVisualsProvider.dp(this, visuals.horizontalPaddingDp),
-                ProfileVisualsProvider.dp(this, 16),
-                ProfileVisualsProvider.dp(this, visuals.horizontalPaddingDp),
+                (visuals.horizontalPaddingDp * density).toInt(),
+                (16 * density).toInt(),
+                (visuals.horizontalPaddingDp * density).toInt(),
                 0
-            )
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
             )
         }
 
@@ -43,10 +46,10 @@ class PremiumHomeLayout : HomeLayout {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(
-                ProfileVisualsProvider.dp(this, 18),
-                ProfileVisualsProvider.dp(this, 16),
-                ProfileVisualsProvider.dp(this, 18),
-                ProfileVisualsProvider.dp(this, 16)
+                (18 * density).toInt(),
+                (16 * density).toInt(),
+                (18 * density).toInt(),
+                (16 * density).toInt()
             )
 
             ProfileVisualsProvider.roundedBackground(
@@ -66,12 +69,7 @@ class PremiumHomeLayout : HomeLayout {
             text = "Refined by design."
             textSize = visuals.bodySizeSp
             setTextColor(visuals.secondaryText)
-            setPadding(
-                0,
-                ProfileVisualsProvider.dp(this, 4),
-                0,
-                0
-            )
+            setPadding(0, (4 * density).toInt(), 0, 0)
         }
 
         header.addView(title)
@@ -79,22 +77,19 @@ class PremiumHomeLayout : HomeLayout {
 
         val grid = GridView(context).apply {
             numColumns = 4
-            verticalSpacing = ProfileVisualsProvider.dp(this, 16)
-            horizontalSpacing = ProfileVisualsProvider.dp(this, 4)
+            verticalSpacing = (16 * density).toInt()
+            horizontalSpacing = (4 * density).toInt()
             stretchMode = GridView.STRETCH_COLUMN_WIDTH
             gravity = Gravity.CENTER
             clipToPadding = false
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
-            )
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = (18 * density).toInt()
+            }
             adapter = HomeAppAdapter(context, apps, onAppClick)
         }
-
-        val gridParams = grid.layoutParams as LinearLayout.LayoutParams
-        gridParams.topMargin = ProfileVisualsProvider.dp(grid, 18)
-        grid.layoutParams = gridParams
 
         root.addView(
             header,
@@ -103,10 +98,16 @@ class PremiumHomeLayout : HomeLayout {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         )
-
         root.addView(grid)
 
-        container.addView(root)
+        (container as FrameLayout).addView(
+            root,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER_VERTICAL
+            )
+        )
 
         ProfileVisualsProvider.animate(root, MotionStyle.PREMIUM, quality, reducedMotion)
         ProfileVisualsProvider.animateChildren(grid, MotionStyle.PREMIUM, quality, reducedMotion)
