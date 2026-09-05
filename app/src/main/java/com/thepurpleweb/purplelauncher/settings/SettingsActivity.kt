@@ -161,6 +161,20 @@ class SettingsActivity : AppCompatActivity() {
 
         addSection(
             root,
+            "LAYOUT"
+        )
+
+        addSwitch(
+            root,
+            "Freeform canvas (beta)",
+            "Replace the curated app grid with a drag-and-resize module canvas. Long-press the home screen to edit once enabled.",
+            repository.settings.value.freeformCanvasEnabled
+        ) {
+            repository.setFreeformCanvasEnabled(it)
+        }
+
+        addSection(
+            root,
             "BEHAVIOR"
         )
 
@@ -242,16 +256,11 @@ class SettingsActivity : AppCompatActivity() {
                 Intent(Intent.ACTION_SET_WALLPAPER)
             )
         } catch (_: ActivityNotFoundException) {
-            // Some OEM builds don't resolve ACTION_SET_WALLPAPER directly.
-            // Fall back to system display settings rather than doing
-            // nothing or crashing.
             try {
                 startActivity(
                     Intent(Settings.ACTION_DISPLAY_SETTINGS)
                 )
             } catch (_: Exception) {
-                // Nothing more we can legitimately do — degrade silently
-                // rather than fake a picker.
             }
         }
     }

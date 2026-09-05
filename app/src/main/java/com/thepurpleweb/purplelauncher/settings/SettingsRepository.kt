@@ -69,6 +69,12 @@ class SettingsRepository(
                 preferences.getBoolean(
                     KEY_PERFORMANCE_MODE,
                     true
+                ),
+
+            freeformCanvasEnabled =
+                preferences.getBoolean(
+                    KEY_FREEFORM_CANVAS,
+                    false
                 )
         )
     }
@@ -137,6 +143,14 @@ class SettingsRepository(
         )
     }
 
+    fun setFreeformCanvasEnabled(enabled: Boolean) {
+        update(
+            _settings.value.copy(
+                freeformCanvasEnabled = enabled
+            )
+        )
+    }
+
     private fun update(
         settings: LauncherSettings
     ) {
@@ -174,6 +188,10 @@ class SettingsRepository(
                 KEY_PERFORMANCE_MODE,
                 settings.performanceMode
             )
+            .putBoolean(
+                KEY_FREEFORM_CANVAS,
+                settings.freeformCanvasEnabled
+            )
             .apply()
 
         _settings.value = settings
@@ -204,5 +222,8 @@ class SettingsRepository(
 
         private const val KEY_PERFORMANCE_MODE =
             "performance_mode"
+
+        private const val KEY_FREEFORM_CANVAS =
+            "freeform_canvas_enabled"
     }
 }

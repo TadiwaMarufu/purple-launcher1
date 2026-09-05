@@ -16,6 +16,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.thepurpleweb.purplelauncher.apps.AppInfo
 import com.thepurpleweb.purplelauncher.apps.AppRepository
+import com.thepurpleweb.purplelauncher.canvas.CanvasRepository
+import com.thepurpleweb.purplelauncher.canvas.FreeformCanvasView
 import com.thepurpleweb.purplelauncher.drawer.AppDrawerActivity
 import com.thepurpleweb.purplelauncher.gestures.GestureAction
 import com.thepurpleweb.purplelauncher.gestures.GestureRepository
@@ -59,6 +61,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var widgetRepository: WidgetRepository
     private lateinit var settingsRepository: SettingsRepository
     private lateinit var intelligenceManager: IntelligenceManager
+    private lateinit var canvasRepository: CanvasRepository
 
     private lateinit var appWidgetManager: AppWidgetManager
     private lateinit var appWidgetHost: AppWidgetHost
@@ -82,6 +85,9 @@ class MainActivity : AppCompatActivity() {
     private var curatedApps: List<AppInfo> = emptyList()
     private var currentRecommendations: List<IntelligenceRecommendation> = emptyList()
 
+    private var freeformCanvasView: FreeformCanvasView? = null
+    private var canvasEditMode: Boolean = false
+
     private val curatedPackageHints = listOf(
         "com.android.dialer",
         "com.google.android.dialer",
@@ -95,11 +101,6 @@ class MainActivity : AppCompatActivity() {
         "com.android.vending"
     )
 
-    // Lightweight keyword-based emphasis matching for Adaptive Intelligence
-    // recommendations. Deliberately simple/duplicated rather than reusing
-    // AppRepository's private category functions — same acceptable-but-
-    // flagged tradeoff as the AppCategorizer/AppRepository duplication
-    // elsewhere in this project.
     private val mediaKeywords = listOf("spotify", "youtube", "music", "netflix", "player")
     private val productivityKeywords = listOf("docs", "sheets", "calendar", "office", "notion", "slack", "teams", "gmail")
     private val communicationKeywords = listOf("message", "whatsapp", "telegram", "mail", "dialer", "phone", "signal")
@@ -128,6 +129,7 @@ class MainActivity : AppCompatActivity() {
         widgetRepository = WidgetRepository(applicationContext)
         settingsRepository = SettingsRepository(applicationContext)
         intelligenceManager = IntelligenceManager(applicationContext)
+        canvasRepository = CanvasRepository(applicationContext)
 
         appWidgetManager = AppWidgetManager.getInstance(this)
         appWidgetHost = AppWidgetHost(this, WidgetRepository.HOST_ID)
@@ -140,6 +142,7 @@ class MainActivity : AppCompatActivity() {
         setupNowBar()
         setupGestures()
         setupWidgetArea()
+        setupFreeformCanvasToggle()
 
         profileLabel.setOnClickListener {
             startActivity(
@@ -223,6 +226,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderHomeLayout(profile: Profile) {
+        if (settingsRepository.settings.value.freeformCanvasEnabled) {
+            renderFreeformCanvas(profile)
+            return
+        }
+
         val layout = HomeLayoutFactory.forProfile(profile)
 
         var quality = determineVisualQuality()
@@ -240,6 +248,49 @@ class MainActivity : AppCompatActivity() {
         layout.build(homeContentContainer, orderedApps, quality, reducedMotion) { app ->
             appRepository.launchApp(app.packageName)
         }
+    }
+
+    // ---------------------------------------------------------
+    // FREEFORM CANVAS (Phase A)
+    // ---------------------------------------------------------
+
+    private fun setupFreeformCanvasToggle() {
+        homeContentContainer.setOnLongClickListener {
+            if (settingsRepository.settings.value.freeformCanvasEnabled) {
+                canvasEditMode = !canvasEditMode
+                freeformCanvasView?.isEditMode = canvasEditMode
+                true
+            } else {
+                false
+            }
+        }
+    }
+
+    private fun renderFreeformCanvas(profile: Profile) {
+        homeContentContainer.removeAllViews()
+
+        val canvas = FreeformCanvasView(this)
+        val modules = canvasRepository.getModules(profile)
+
+        modules.forEach { state ->
+            canvas.addModule(state) { updatedState ->
+                val current = canvasRepository.getModules(profile).map {
+                    if (it.id == updatedState.id) updatedState else it
+                }
+                canvasRepository.saveModules(profile, current)
+            }
+        }
+
+        canvas.isEditMode = canvasEditMode
+        freeformCanvasView = canvas
+
+        homeContentContainer.addView(
+            canvas,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        )
     }
 
     private fun applyEmphasis(
@@ -287,7 +338,11 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             nowBarController.state.collect { state ->
-                nowBarView.setState(state.primary, determineVisualQuality(), settingsRepository.settings.value.reducedMotion)
+                nowBarView.setState(
+                    state.primary,
+                    determineVisualQuality(),
+                    settingsRepository.settings.value.reducedMotion
+                )
             }
         }
 
@@ -325,7 +380,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateNowBar(profile: Profile) {
         val quality = determineVisualQuality()
-        nowBarView.setProfile(profile, quality, settingsRepository.settings.value.reducedMotion)
+        nowBarView.setProfile(
+            profile,
+            quality,
+            settingsRepository.settings.value.reducedMotion
+        )
 
         val activeItem = nowBarCoordinator.current()
         nowBarController.setPrimary(activeItem ?: buildIdleItem(profile))
