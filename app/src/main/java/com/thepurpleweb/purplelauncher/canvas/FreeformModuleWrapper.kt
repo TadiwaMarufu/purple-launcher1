@@ -6,19 +6,8 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
+import android.widget.TextView
 
-/**
- * Wraps a module's content view with drag (move) and resize handling,
- * active only while the canvas is in edit mode.
- *
- * Movement uses direct View.x/View.y translation — the simplest correct
- * way to do absolute positioning of a child inside a FrameLayout parent,
- * without needing a custom onLayout override on the parent itself.
- *
- * Resize is handled by a small dedicated handle view in the corner,
- * rather than trying to detect edge-drags on the module itself, since
- * that would conflict with move-drag detection over the same view.
- */
 class FreeformModuleWrapper(
     context: Context,
     val moduleId: String
@@ -28,10 +17,12 @@ class FreeformModuleWrapper(
         set(value) {
             field = value
             resizeHandle.visibility = if (value) VISIBLE else GONE
+            deleteHandle.visibility = if (value) VISIBLE else GONE
         }
 
     var onMoved: ((newXPx: Float, newYPx: Float) -> Unit)? = null
     var onResized: ((newWidthPx: Int, newHeightPx: Int) -> Unit)? = null
+    var onDeleteRequested: (() -> Unit)? = null
 
     private var dragStartRawX = 0f
     private var dragStartRawY = 0f
@@ -46,12 +37,33 @@ class FreeformModuleWrapper(
         visibility = GONE
     }
 
+    private val deleteHandle = TextView(context).apply {
+        text = "\u2715"
+        textSize = 12f
+        setTextColor(Color.WHITE)
+        gravity = Gravity.CENTER
+        setBackgroundColor(Color.rgb(180, 40, 40))
+        visibility = GONE
+    }
+
     init {
         val handleSizePx = (18 * resources.displayMetrics.density).toInt()
+
         addView(
             resizeHandle,
             LayoutParams(handleSizePx, handleSizePx, Gravity.BOTTOM or Gravity.END)
         )
+
+        addView(
+            deleteHandle,
+            LayoutParams(handleSizePx, handleSizePx, Gravity.TOP or Gravity.END)
+        )
+
+        deleteHandle.setOnClickListener {
+            if (isEditMode) {
+                onDeleteRequested?.invoke()
+            }
+        }
 
         resizeHandle.setOnTouchListener { _, event ->
             if (!isEditMode) return@setOnTouchListener false

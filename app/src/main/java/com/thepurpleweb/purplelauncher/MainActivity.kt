@@ -285,6 +285,16 @@ class MainActivity : AppCompatActivity() {
         }
 
         canvas.isEditMode = canvasEditMode
+
+        canvas.onAddRequested = {
+            showAddModuleDialog(profile)
+        }
+
+        canvas.onModuleDeleted = { moduleId ->
+            val remaining = canvasRepository.getModules(profile).filter { it.id != moduleId }
+            canvasRepository.saveModules(profile, remaining)
+            canvas.removeModule(moduleId)
+        }
         freeformCanvasView = canvas
         canvas.startAll()
 
@@ -295,6 +305,36 @@ class MainActivity : AppCompatActivity() {
                 FrameLayout.LayoutParams.MATCH_PARENT
             )
         )
+    }
+
+    private fun showAddModuleDialog(profile: Profile) {
+        val types = com.thepurpleweb.purplelauncher.canvas.CanvasModuleType.entries.toList()
+        val labels = types.map { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("Add module")
+            .setItems(labels) { _, which ->
+                val newState = com.thepurpleweb.purplelauncher.canvas.CanvasModuleState(
+                    id = "module_${System.currentTimeMillis()}",
+                    type = types[which],
+                    xDp = 24f,
+                    yDp = 24f,
+                    widthDp = 180f,
+                    heightDp = 100f
+                )
+
+                val updated = canvasRepository.getModules(profile) + newState
+                canvasRepository.saveModules(profile, updated)
+
+                freeformCanvasView?.addModule(newState) { updatedState ->
+                    val current = canvasRepository.getModules(profile).map {
+                        if (it.id == updatedState.id) updatedState else it
+                    }
+                    canvasRepository.saveModules(profile, current)
+                }
+                freeformCanvasView?.startAll()
+            }
+            .show()
     }
 
     private fun applyEmphasis(
