@@ -31,14 +31,6 @@ class NowBarMediaManager(
 
     fun start() {
         try {
-            // Must reference an actual, manifest-registered notification
-            // listener service that the user has granted access to.
-            // PurpleNotificationListenerService is the one declared in
-            // AndroidManifest.xml — this was previously pointed at a
-            // NotificationListenerBridge class that was never registered,
-            // which caused getActiveSessions() to throw a SecurityException
-            // on every call, silently swallowed below, so MUSIC never
-            // populated regardless of what was playing.
             val componentName = ComponentName(context, PurpleNotificationListenerService::class.java)
             sessionManager?.addOnActiveSessionsChangedListener(sessionListener, componentName)
             val initial = sessionManager?.getActiveSessions(componentName)
@@ -54,6 +46,36 @@ class NowBarMediaManager(
             activeController?.unregisterCallback(controllerCallback)
             activeController = null
         } catch (_: Exception) {}
+    }
+
+    // Real Android MediaController transport controls — Android itself
+    // handles apps that don't support a given action (no-op), so no
+    // capability check is required before calling these.
+    fun togglePlayPause() {
+        try {
+            val controller = activeController ?: return
+            val state = controller.playbackState?.state
+            if (state == PlaybackState.STATE_PLAYING) {
+                controller.transportControls.pause()
+            } else {
+                controller.transportControls.play()
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    fun skipNext() {
+        try {
+            activeController?.transportControls?.skipToNext()
+        } catch (_: Exception) {
+        }
+    }
+
+    fun skipPrevious() {
+        try {
+            activeController?.transportControls?.skipToPrevious()
+        } catch (_: Exception) {
+        }
     }
 
     private fun attachToActiveSession(controllers: List<MediaController>?) {

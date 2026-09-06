@@ -4,34 +4,35 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.graphics.Color
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
 import android.os.BatteryManager
 import android.view.Gravity
+import android.view.View
+import android.widget.FrameLayout
 import android.widget.LinearLayout
-import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import com.thepurpleweb.purplelauncher.canvas.CanvasModuleStyle
+import com.thepurpleweb.purplelauncher.home.ProfileVisualsProvider
 
 class BatteryWidgetView(context: Context) : NativeWidgetView(context) {
 
     private var isRegistered = false
 
+    private val ring = BatteryRingView(context)
+
     private val percentText = TextView(context).apply {
-        textSize = 32f
-        setTextColor(Color.WHITE)
+        textSize = 20f
+        setTextColor(CanvasModuleStyle.primaryText)
         gravity = Gravity.CENTER
     }
 
     private val statusText = TextView(context).apply {
-        textSize = 13f
-        setTextColor(Color.rgb(180, 180, 180))
+        textSize = 12f
+        setTextColor(CanvasModuleStyle.secondaryText)
         gravity = Gravity.CENTER
-    }
-
-    private val progressBar = ProgressBar(
-        context, null, android.R.attr.progressBarStyleHorizontal
-    ).apply {
-        max = 100
     }
 
     private val receiver = object : BroadcastReceiver() {
@@ -42,22 +43,43 @@ class BatteryWidgetView(context: Context) : NativeWidgetView(context) {
     }
 
     init {
+        ProfileVisualsProvider.roundedBackground(
+            this,
+            CanvasModuleStyle.cardBackground,
+            CanvasModuleStyle.cornerRadiusDp
+        )
+
         val column = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setPadding(24, 16, 24, 16)
+            setPadding(dp(16), dp(12), dp(16), dp(12))
         }
-        column.addView(percentText)
-        column.addView(
-            progressBar,
-            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 16).apply {
-                topMargin = 12
-                bottomMargin = 8
-            }
+
+        val ringSize = dp(64)
+        val ringStack = FrameLayout(context)
+        ringStack.addView(ring, FrameLayout.LayoutParams(ringSize, ringSize))
+        ringStack.addView(
+            percentText,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER
+            )
         )
-        column.addView(statusText)
+
+        column.addView(ringStack, LinearLayout.LayoutParams(ringSize, ringSize))
+        column.addView(
+            statusText,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(8) }
+        )
+
         addView(column, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
     }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private fun updateFromIntent(intent: Intent) {
         val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
@@ -70,16 +92,14 @@ class BatteryWidgetView(context: Context) : NativeWidgetView(context) {
             status == BatteryManager.BATTERY_STATUS_FULL
 
         percentText.text = "$percent%"
-        progressBar.progress = percent
+        ring.progress = percent
+        ring.invalidate()
         statusText.text = if (charging) "Charging" else "On battery"
     }
 
     override fun start() {
         if (isRegistered) return
         try {
-            // RECEIVER_NOT_EXPORTED per the same Android 13+ requirement
-            // that caused the NowBarNotificationBridge crash risk earlier
-            // this session — applying it defensively here too.
             ContextCompat.registerReceiver(
                 context,
                 receiver,
@@ -98,5 +118,40 @@ class BatteryWidgetView(context: Context) : NativeWidgetView(context) {
         } catch (_: Exception) {
         }
         isRegistered = false
+    }
+
+    /**
+     * Small custom View for the ring itself — no Material Components
+     * dependency exists in this project, so a hand-drawn arc is the
+     * correct, real approach rather than pulling in a new library for
+     * one shape.
+     */
+    private class BatteryRingView(context: Context) : View(context) {
+
+        var progress: Int = 0
+
+        private val strokeWidthPx = 8f * resources.displayMetrics.density
+
+        private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = strokeWidthPx
+            strokeCap = Paint.Cap.ROUND
+        }
+
+        private val rect = RectF()
+
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+
+            val inset = strokeWidthPx / 2f
+            rect.set(inset, inset, width - inset, height - inset)
+
+            paint.color = CanvasModuleStyle.trackColor
+            canvas.drawArc(rect, 0f, 360f, false, paint)
+
+            paint.color = CanvasModuleStyle.accent
+            val sweep = 360f * (progress / 100f)
+            canvas.drawArc(rect, -90f, sweep, false, paint)
+        }
     }
 }
